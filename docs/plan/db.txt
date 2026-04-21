@@ -1,0 +1,37 @@
+Database structure (short)
+============================
+
+users
+-----
+- id, email, GitHub id / tokens (or link to OAuth), timestamps
+
+sheets
+------
+- id, user_id, name, created_at, updated_at
+
+sheet_repos (repos attached to a sheet)
+---------------------------------------
+- id, sheet_id, owner, name (or full full_name), optional display_name if you override "project" later
+- Unique on (sheet_id, owner, name)
+
+log_entry_runs (one click of "Create log entry" — groups the rows created together)
+----------------------------------------------------------------------------------
+- id, sheet_id, range_start, range_end, created_at
+- Optional: status (draft / saved) if drafts are persisted
+
+log_entries (one row = one line on the sheet / one export row)
+---------------------------------------------------------------
+- id, sheet_id, run_id (nullable if you don't use runs), sheet_repo_id (which repo this row is for)
+- from / to (timestamps or dates — match what you store in Excel)
+- task, time (nullable or default 0), project (string; default repo name), notes (nullable)
+- description or commit_messages_blob (text: joined commit messages for v1)
+- Optional: raw_commits_json (audit / regenerate)
+- created_at, updated_at
+
+Indexes: sheet_id, sheet_repo_id, run_id; unique (run_id, sheet_repo_id) if each run has at most one entry per repo.
+
+Why log_entry_runs
+------------------
+Ties Option A (many repos → many rows) to one user action and one date range without duplicating range_start/range_end on every row (you can still copy them onto each log_entries row for simple Excel export).
+
+If you skip runs, put range_start / range_end on each log_entries row only; you lose a clean "this batch was one click" unless you add something else later.
