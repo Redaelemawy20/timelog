@@ -42,3 +42,6 @@ env/
 # Django (optional, if you use these paths)
 media/
 staticfiles/
+
+# Local secrets (e.g. GitHub PAT file path from GITHUB_TOKEN_FILE)
+.github-token

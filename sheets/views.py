@@ -1,18 +1,14 @@
-from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, render
 
-
-DUMMY_SHEETS = [
-    {"id": 1, "name": "My First Sheet"},
-]
+from .models import Sheet
 
 
 def sheet_list(request: HttpRequest) -> HttpResponse:
-    return render(request, "sheets/list.html", {"sheets": DUMMY_SHEETS})
+    sheets = Sheet.objects.all()
+    return render(request, "sheets/list.html", {"sheets": sheets})
 
 
 def sheet_detail(request: HttpRequest, sheet_id: int) -> HttpResponse:
-    sheet = next((item for item in DUMMY_SHEETS if item["id"] == sheet_id), None)
-    if not sheet:
-        raise Http404("Sheet not found")
+    sheet = get_object_or_404(Sheet, pk=sheet_id)
     return render(request, "sheets/detail.html", {"sheet": sheet})
