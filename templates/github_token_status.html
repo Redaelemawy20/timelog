@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}GitHub{% endblock %}
+
+{% block content %}
+  <h2>GitHub</h2>
+
+  {% if phase == "not_configured" %}
+    <p class="status status-warn">Set <code>GITHUB_TOKEN_FILE</code> in your <code>.env</code> (see <code>.env.example</code>).</p>
+  {% elif phase == "file_error" %}
+    <p class="status status-error">{{ file_error }}</p>
+  {% elif phase == "api_error" %}
+    <p class="status status-error">{{ api_error }}</p>
+  {% elif phase == "success" %}
+    <p class="status status-ok">Connected as <strong>{{ login }}</strong>{% if name %} — {{ name }}{% endif %}</p>
+  {% endif %}
+
+  <p><a href="/sheets/">Back to sheets</a></p>
+{% endblock %}
