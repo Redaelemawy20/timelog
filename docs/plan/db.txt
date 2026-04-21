@@ -1,13 +1,11 @@
 Database structure (short)
 ============================
 
-users
------
-- id, email, GitHub id / tokens (or link to OAuth), timestamps
+Scope: single operator, local tool — no users table or user_id on rows.
 
 sheets
 ------
-- id, user_id, name, created_at, updated_at
+- id, name, created_at, updated_at
 
 sheet_repos (repos attached to a sheet)
 ---------------------------------------
@@ -29,6 +27,11 @@ log_entries (one row = one line on the sheet / one export row)
 - created_at, updated_at
 
 Indexes: sheet_id, sheet_repo_id, run_id; unique (run_id, sheet_repo_id) if each run has at most one entry per repo.
+
+GitHub credentials
+------------------
+Keep outside the database: e.g. a file path in environment variables pointing
+to a token file, or a secret manager — not a column on a users table.
 
 Why log_entry_runs
 ------------------

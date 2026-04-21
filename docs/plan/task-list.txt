@@ -1,28 +1,30 @@
-v1 — ordered task list
-======================
+v1 — ordered task list (local single-user tool)
+==============================================
+
+Assumptions: runs on your machine only; no sign-in or multi-user auth. GitHub
+Personal Access Token (or similar) lives in a local file (path configurable via
+env); not stored in the database.
 
 1. Project skeleton — Web app scaffold, env handling, basic layout/navigation (sheets list, sheet detail).
 
-2. Database — Migrations for users, sheets, sheet_repos, log_entry_runs, log_entries (per docs/plan/db.txt); local/dev DB wired up.
+2. Database — Migrations for sheets, sheet_repos, log_entry_runs, log_entries (per docs/plan/db.txt); local SQLite (or dev DB) wired up.
 
-3. Auth — Sign-in (email/password or GitHub OAuth—pick one); user_id on all owned records.
+3. GitHub access — Read token from env and/or a file on disk; server-side helper to call GitHub API with pagination and basic error handling. Do not persist the token in the app DB.
 
-4. GitHub access — Store PAT (or OAuth token) securely; server-side helper to call GitHub API with pagination and basic error handling.
+4. Sheets: CRUD — Create/rename/list/delete sheets; empty state.
 
-5. Sheets: CRUD — Create/rename/list/delete sheets; empty state.
+5. Sheet repos — UI to add/remove repos on a sheet (owner + name); persist sheet_repos; validate input.
 
-6. Sheet repos — UI to add/remove repos on a sheet (owner + name); persist sheet_repos; validate input.
+6. “Create log entry” flow — Pick date range → for each sheet_repo, fetch commits on main in range (no author filter) → build one draft row per repo: from/to, project = repo name, description = joined commit messages; time blank/0.
 
-7. “Create log entry” flow — Pick date range → for each sheet_repo, fetch commits on main in range (no author filter) → build one draft row per repo: from/to, project = repo name, description = joined commit messages; time blank/0.
+7. Review & save — Editable form per row (or batch table); save creates log_entry_run + log_entries in DB.
 
-8. Review & save — Editable form per row (or batch table); save creates log_entry_run + log_entries in DB.
+8. List log entries — Show saved entries for a sheet (filter by run optional); edit/delete entry if you want v1 polish.
 
-9. List log entries — Show saved entries for a sheet (filter by run optional); edit/delete entry if you want v1 polish.
+9. Export — “Generate Excel” from DB for a sheet (columns: from, to, task, time, project, notes); download .xlsx.
 
-10. Export — “Generate Excel” from DB for a sheet (columns: from, to, task, time, project, notes); download .xlsx.
-
-11. Hardening — Rate-limit awareness, loading/error states, confirm destructive actions, timezone display consistent with stored values.
+10. Hardening — Rate-limit awareness, loading/error states, confirm destructive actions, timezone display consistent with stored values.
 
 Optional before ship
 --------------------
-Minimal tests on GitHub fetch + DB writes; README with env vars and how to run.
+Minimal tests on GitHub fetch + DB writes; README with env vars (including token file path) and how to run.
