@@ -27,3 +27,18 @@ AGENTS.md
 .env*
 .vercel
 skills-lock.json
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+db.sqlite3
+.venv/
+venv/
+env/
+
+# Django (optional, if you use these paths)
+media/
+staticfiles/

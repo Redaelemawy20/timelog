@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Sheets | Time Log{% endblock %}
+
+{% block content %}
+  <h2>Sheets</h2>
+
+  {% if sheets %}
+    <ul>
+      {% for sheet in sheets %}
+        <li>
+          <a href="/sheets/{{ sheet.id }}/">{{ sheet.name }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No sheets yet.</p>
+  {% endif %}
+{% endblock %}
