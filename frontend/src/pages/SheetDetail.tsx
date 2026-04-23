@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { fetchSheet } from "../api";
-import type { SheetDetail as SheetDetailType } from "../types";
+import { fetchSheet } from "../api/sheets";
+import type { SheetDetail as SheetDetailType } from "../types/sheet";
 
 interface Props {
   sheetId: number;

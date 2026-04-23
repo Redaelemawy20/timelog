@@ -1,54 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchSheets } from "../api";
-import type { Sheet, SheetSummary } from "../types";
-
-function sheetToSummary(sheet: Sheet): SheetSummary {
-  return {
-    ...sheet,
-    repo_count: 0,
-    latest_run_summary: null,
-  };
-}
+import { ChevronRightIcon } from "../components/icons/ChevronRightIcon";
+import { SheetListSkeleton } from "../components/sheet/SheetListSkeleton";
+import { fetchSheets } from "../api/sheets";
+import { sheetToSummary } from "../lib/sheetSummary";
+import type { SheetSummary } from "../types/sheet";
 
 interface Props {
   onSelect: (id: number) => void;
-}
-
-function SheetListSkeleton() {
-  return (
-    <ul
-      className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden"
-      aria-busy="true"
-      aria-label="Loading sheets"
-    >
-      {Array.from({ length: 4 }, (_, i) => (
-        <li key={i} className="px-4 py-4 flex items-center gap-3">
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-48 rounded bg-gray-200 animate-pulse" />
-            <div className="h-3 w-full max-w-md rounded bg-gray-100 animate-pulse" />
-          </div>
-          <div className="h-5 w-5 rounded bg-gray-100 animate-pulse shrink-0" />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg
-      className="h-5 w-5 text-gray-400 shrink-0"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
 }
 
 export default function SheetList({ onSelect }: Props) {
