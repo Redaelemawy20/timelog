@@ -34,6 +34,12 @@ export interface Sheet {
   updated_at: string;
 }
 
+/** Home list row: base sheet plus quick stats for scanning. */
+export interface SheetSummary extends Sheet {
+  repo_count: number;
+  latest_run_summary: string | null;
+}
+
 export interface SheetDetail extends Sheet {
   repos: SheetRepo[];
   log_entry_runs: LogEntryRun[];

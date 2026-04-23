@@ -2,8 +2,8 @@ import type { GithubTokenStatus, Sheet, SheetDetail } from "./types";
 
 const BASE = "/api";
 
-export async function fetchSheets(): Promise<Sheet[]> {
-  const res = await fetch(`${BASE}/sheets/`);
+export async function fetchSheets(signal?: AbortSignal): Promise<Sheet[]> {
+  const res = await fetch(`${BASE}/sheets/`, { signal });
   if (!res.ok) throw new Error(`Failed to fetch sheets: ${res.status}`);
   return res.json() as Promise<Sheet[]>;
 }
