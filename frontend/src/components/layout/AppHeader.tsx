@@ -1,5 +1,7 @@
 import type { GithubTokenStatus } from "../../types/github";
 import { tokenChipLabel, tokenTooltip } from "../../lib/githubTokenDisplay";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface AppHeaderProps {
   tokenStatus: GithubTokenStatus | null;
@@ -11,37 +13,35 @@ export function AppHeader({ tokenStatus, onNavigateHome, onNewSheet }: AppHeader
   const tokenOk = tokenStatus?.phase === "success";
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-      <div className="max-w-3xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <button
+    <header className="border-b border-border bg-card px-4 py-4 sm:px-6">
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <Button
           type="button"
+          variant="ghost"
+          className="h-auto min-w-0 flex-1 flex-col items-start gap-0.5 rounded-lg px-2 py-1.5 text-left sm:flex-none"
           onClick={onNavigateHome}
-          className="text-left rounded-lg px-2 py-1.5 -mx-2 -my-1.5 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          <h1 className="text-xl font-bold text-gray-900">Time Log</h1>
-          <p className="text-sm text-gray-500 font-normal mt-0.5 max-w-md">
+          <span className="text-xl font-bold tracking-tight text-foreground">Time Log</span>
+          <span className="max-w-md text-sm font-normal text-muted-foreground">
             Pick a sheet to see repos and time log runs.
-          </p>
-        </button>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 shrink-0 sm:self-start">
-          <button
-            type="button"
-            onClick={onNewSheet}
-            className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-          >
+          </span>
+        </Button>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:self-start sm:gap-3">
+          <Button type="button" onClick={onNewSheet}>
             New sheet
-          </button>
+          </Button>
           {tokenStatus ? (
-            <span
+            <Badge
+              variant="outline"
               title={tokenTooltip(tokenStatus)}
-              className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+              className={
                 tokenOk
-                  ? "border-gray-200 bg-gray-50 text-gray-700"
-                  : "border-amber-200 bg-amber-50 text-amber-900"
-              }`}
+                  ? "shrink-0 font-normal text-muted-foreground"
+                  : "shrink-0 border-amber-200 bg-amber-50 font-normal text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+              }
             >
               {tokenChipLabel(tokenStatus)}
-            </span>
+            </Badge>
           ) : null}
         </div>
       </div>

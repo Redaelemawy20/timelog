@@ -1,8 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { fetchSheet } from "../api/sheets";
 import { AddLogEntryRunDialog } from "../components/sheet/AddLogEntryRunDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
   sheetId: number;
@@ -16,28 +23,42 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
     queryFn: () => fetchSheet(sheetId),
   });
 
-  if (isPending) return <p className="text-gray-500">Loading…</p>;
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-9 w-64" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-full max-w-md" />
+          <Skeleton className="h-4 w-full max-w-sm" />
+        </div>
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
 
   if (isError) {
     const message = error instanceof Error ? error.message : String(error);
     return (
-      <div className="space-y-3">
-        <button
+      <div className="space-y-4">
+        <Button type="button" variant="ghost" size="sm" className="gap-1 px-0" onClick={onBack}>
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to sheets
+        </Button>
+        <Alert variant="destructive">
+          <AlertTitle>Something went wrong</AlertTitle>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+        <Button
           type="button"
-          onClick={onBack}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          ← Back to sheets
-        </button>
-        <p className="text-red-600">{message}</p>
-        <button
-          type="button"
+          variant="outline"
+          size="sm"
           onClick={() => void refetch()}
           disabled={isFetching}
-          className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-800 ring-1 ring-inset ring-red-200 hover:bg-red-50 disabled:opacity-50"
         >
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -47,92 +68,87 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
   return (
     <div>
       <AddLogEntryRunDialog open={addRunOpen} onClose={() => setAddRunOpen(false)} />
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-4 text-sm text-blue-600 hover:underline"
-      >
-        ← Back to sheets
-      </button>
+      <Button type="button" variant="ghost" size="sm" className="mb-4 gap-1 px-0" onClick={onBack}>
+        <ArrowLeft className="size-4" aria-hidden />
+        Back to sheets
+      </Button>
 
-      <h2 className="text-2xl font-semibold text-gray-900 mb-4">{sheet.name}</h2>
+      <h2 className="mb-6 text-2xl font-semibold tracking-tight text-foreground">{sheet.name}</h2>
 
-      <section className="mb-6">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
+      <section className="mb-8">
+        <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Repos
         </h3>
         {sheet.repos.length ? (
-          <ul className="space-y-1">
+          <ul className="space-y-1.5 text-sm text-foreground">
             {sheet.repos.map((r) => (
-              <li key={r.id} className="text-gray-700">
-                {r.display_name ?? `${r.owner}/${r.name}`}
-              </li>
+              <li key={r.id}>{r.display_name ?? `${r.owner}/${r.name}`}</li>
             ))}
           </ul>
         ) : (
-          <p className="text-gray-400">No repos linked.</p>
+          <p className="text-sm text-muted-foreground">No repos linked.</p>
         )}
       </section>
 
+      <Separator className="mb-8" />
+
       <section>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-            Log Entry Runs
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Log entry runs
           </h3>
-          <button
-            type="button"
-            onClick={() => setAddRunOpen(true)}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-          >
+          <Button type="button" size="sm" onClick={() => setAddRunOpen(true)}>
             Add run
-          </button>
+          </Button>
         </div>
         {sheet.log_entry_runs.length ? (
           <div className="space-y-4">
             {sheet.log_entry_runs.map((run) => (
-              <div
-                key={run.id}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-800">
-                    {run.range_start} → {run.range_end}
-                  </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      run.status === "saved"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {run.status}
-                  </span>
-                </div>
-                {run.log_entries.length > 0 && (
-                  <table className="w-full text-sm text-left">
-                    <thead>
-                      <tr className="text-xs text-gray-500 border-b border-gray-100">
-                        <th className="pb-1 pr-4">Project</th>
-                        <th className="pb-1 pr-4">Task</th>
-                        <th className="pb-1">Hours</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {run.log_entries.map((entry) => (
-                        <tr key={entry.id} className="border-b border-gray-50 last:border-0">
-                          <td className="py-1 pr-4 text-gray-700">{entry.project}</td>
-                          <td className="py-1 pr-4 text-gray-600">{entry.task || "—"}</td>
-                          <td className="py-1 text-gray-700">{entry.time_hours ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+              <Card key={run.id} size="sm" className="shadow-sm">
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">
+                      {run.range_start} → {run.range_end}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        run.status === "saved"
+                          ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
+                          : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                      }
+                    >
+                      {run.status}
+                    </Badge>
+                  </div>
+                  {run.log_entries.length > 0 ? (
+                    <div>
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-xs text-muted-foreground">
+                            <th className="pb-2 pr-4 font-medium">Project</th>
+                            <th className="pb-2 pr-4 font-medium">Task</th>
+                            <th className="pb-2 font-medium">Hours</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {run.log_entries.map((entry) => (
+                            <tr key={entry.id} className="border-b border-border/60 last:border-0">
+                              <td className="py-2 pr-4 text-foreground">{entry.project}</td>
+                              <td className="py-2 pr-4 text-muted-foreground">{entry.task || "—"}</td>
+                              <td className="py-2 text-foreground">{entry.time_hours ?? "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
-          <p className="text-gray-400">No runs yet.</p>
+          <p className="text-sm text-muted-foreground">No runs yet.</p>
         )}
       </section>
     </div>

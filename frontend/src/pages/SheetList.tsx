@@ -1,10 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
-import { ChevronRightIcon } from "../components/icons/ChevronRightIcon";
 import { SheetListSkeleton } from "../components/sheet/SheetListSkeleton";
 import { fetchSheets } from "../api/sheets";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 import { sheetToSummary } from "../lib/sheetSummary";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 interface Props {
   onSelect: (id: number) => void;
 }
@@ -29,102 +35,112 @@ export default function SheetList({ onSelect }: Props) {
   if (isError) {
     const message = error instanceof Error ? error.message : String(error);
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span>{message}</span>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          className="shrink-0 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-800 ring-1 ring-inset ring-red-200 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
-        >
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive" className="items-start">
+        <AlertDescription className="pr-24">{message}</AlertDescription>
+        <AlertAction>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-destructive/30 bg-background"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+          >
+            Retry
+          </Button>
+        </AlertAction>
+      </Alert>
     );
   }
 
   if (!sheets.length) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-600">
-        <p className="font-medium text-gray-800">No sheets yet</p>
-        <p className="mt-2 text-gray-500">
-          Use <span className="font-medium text-gray-700">New sheet</span> in the header to add one.
+      <Card className="border-dashed py-10 text-center shadow-none">
+        <p className="font-medium text-foreground">No sheets yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Use <span className="font-medium text-foreground">New sheet</span> in the header to add
+          one.
         </p>
-      </div>
+      </Card>
     );
   }
+
+  const filterField = (
+    <div className="space-y-2">
+      <Label htmlFor="sheet-filter" className="text-muted-foreground">
+        Filter sheets
+      </Label>
+      <Input
+        id="sheet-filter"
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Filter by name…"
+        className="max-w-md"
+      />
+    </div>
+  );
 
   if (!filtered.length) {
     return (
       <div className="space-y-3">
-        <label className="block text-sm text-gray-600">
-          <span className="sr-only">Filter sheets</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by name…"
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </label>
-        <p className="text-sm text-gray-500">No sheets match “{query.trim()}”. Try another search.</p>
+        {filterField}
+        <p className="text-sm text-muted-foreground">
+          No sheets match &ldquo;{query.trim()}&rdquo;. Try another search.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm text-gray-600">
-        <span className="sr-only">Filter sheets</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by name…"
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </label>
+      {filterField}
 
-      <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-        {filtered.map((sheet) => (
-          <li key={sheet.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(sheet.id)}
-              className="w-full px-4 py-3.5 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
-            >
-              <span className="flex-1 min-w-0">
-                <span className="flex items-baseline gap-2 flex-wrap">
-                  <span className="font-medium text-gray-900">{sheet.name}</span>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
-                    Updated {new Date(sheet.updated_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+      <Card className="overflow-hidden gap-0 py-0 shadow-sm">
+        <ul className="divide-y divide-border">
+          {filtered.map((sheet) => (
+            <li key={sheet.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(sheet.id)}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-medium text-foreground">{sheet.name}</span>
+                    <span className="whitespace-nowrap text-xs text-muted-foreground">
+                      Updated{" "}
+                      {new Date(sheet.updated_at).toLocaleDateString(undefined, {
+                        dateStyle: "medium",
+                      })}
+                    </span>
                   </span>
+                  {(sheet.repo_count > 0 || sheet.latest_run_summary) && (
+                    <span className="mt-1 block text-sm text-muted-foreground">
+                      {sheet.repo_count > 0 ? (
+                        <>
+                          {sheet.repo_count} {sheet.repo_count === 1 ? "repo" : "repos"}
+                        </>
+                      ) : null}
+                      {sheet.latest_run_summary ? (
+                        <>
+                          {sheet.repo_count > 0 ? (
+                            <span className="mx-1.5 text-border" aria-hidden>
+                              ·
+                            </span>
+                          ) : null}
+                          Latest run: {sheet.latest_run_summary}
+                        </>
+                      ) : null}
+                    </span>
+                  )}
                 </span>
-                {(sheet.repo_count > 0 || sheet.latest_run_summary) && (
-                  <span className="mt-1 block text-sm text-gray-500">
-                    {sheet.repo_count > 0 ? (
-                      <>
-                        {sheet.repo_count} {sheet.repo_count === 1 ? "repo" : "repos"}
-                      </>
-                    ) : null}
-                    {sheet.latest_run_summary ? (
-                      <>
-                        {sheet.repo_count > 0 ? (
-                          <span className="text-gray-300 mx-1.5" aria-hidden>
-                            ·
-                          </span>
-                        ) : null}
-                        Latest run: {sheet.latest_run_summary}
-                      </>
-                    ) : null}
-                  </span>
-                )}
-              </span>
-              <ChevronRightIcon />
-            </button>
-          </li>
-        ))}
-      </ul>
+                <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   );
 }

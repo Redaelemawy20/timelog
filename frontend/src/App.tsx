@@ -11,7 +11,7 @@ export default function App() {
   const tokenStatus = useGithubTokenStatus();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       <AppHeader
         tokenStatus={tokenStatus}
         onNavigateHome={() => setSelectedId(null)}
@@ -19,13 +19,13 @@ export default function App() {
       />
       <CreateSheetDialog open={createSheetOpen} onClose={() => setCreateSheetOpen(false)} />
 
-      <main className="max-w-3xl mx-auto px-4 py-10">
+      <main className="mx-auto max-w-3xl px-4 py-10">
         {selectedId === null ? (
           <section aria-labelledby="sheets-heading">
-            <h2 id="sheets-heading" className="text-lg font-semibold text-gray-900">
+            <h2 id="sheets-heading" className="text-lg font-semibold tracking-tight text-foreground">
               Sheets
             </h2>
-            <p className="text-sm text-gray-500 mt-1 mb-6 max-w-2xl">
+            <p className="mt-1 mb-6 max-w-2xl text-sm text-muted-foreground">
               Each sheet groups repositories and log entry runs for a workspace or initiative.
             </p>
             <SheetList onSelect={setSelectedId} />
