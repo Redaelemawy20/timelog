@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { fetchSheet } from "../api/sheets";
+import { AddLogEntryRunDialog } from "../components/sheet/AddLogEntryRunDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 
 interface Props {
@@ -8,6 +10,7 @@ interface Props {
 }
 
 export default function SheetDetail({ sheetId, onBack }: Props) {
+  const [addRunOpen, setAddRunOpen] = useState(false);
   const { data: sheet, isPending, isError, error, refetch, isFetching } = useQuery({
     queryKey: sheetKeys.detail(sheetId),
     queryFn: () => fetchSheet(sheetId),
@@ -43,6 +46,7 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
 
   return (
     <div>
+      <AddLogEntryRunDialog open={addRunOpen} onClose={() => setAddRunOpen(false)} />
       <button
         type="button"
         onClick={onBack}
@@ -71,9 +75,18 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
       </section>
 
       <section>
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
-          Log Entry Runs
-        </h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+            Log Entry Runs
+          </h3>
+          <button
+            type="button"
+            onClick={() => setAddRunOpen(true)}
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            Add run
+          </button>
+        </div>
         {sheet.log_entry_runs.length ? (
           <div className="space-y-4">
             {sheet.log_entry_runs.map((run) => (
