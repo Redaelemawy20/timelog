@@ -12,12 +12,19 @@ from .github_token import (
     verify_github_token,
 )
 from .models import Sheet
-from .serializers import SheetDetailSerializer, SheetListSerializer
+from .serializers import SheetCreateSerializer, SheetDetailSerializer, SheetListSerializer
 
-@api_view(["GET"])
+
+@api_view(["GET", "POST"])
 def api_sheet_list(request: Request) -> Response:
-    sheets = Sheet.objects.all()
-    return Response(SheetListSerializer(sheets, many=True).data)
+    if request.method == "GET":
+        sheets = Sheet.objects.all()
+        return Response(SheetListSerializer(sheets, many=True).data)
+
+    create = SheetCreateSerializer(data=request.data)
+    create.is_valid(raise_exception=True)
+    sheet = create.save()
+    return Response(SheetListSerializer(sheet).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])

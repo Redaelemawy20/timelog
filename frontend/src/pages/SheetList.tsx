@@ -7,9 +7,11 @@ import type { SheetSummary } from "../types/sheet";
 
 interface Props {
   onSelect: (id: number) => void;
+  /** Increment to refetch the list (e.g. after creating a sheet). */
+  refreshVersion?: number;
 }
 
-export default function SheetList({ onSelect }: Props) {
+export default function SheetList({ onSelect, refreshVersion = 0 }: Props) {
   const [sheets, setSheets] = useState<SheetSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function SheetList({ onSelect }: Props) {
       active = false;
       ac.abort();
     };
-  }, [loadKey]);
+  }, [loadKey, refreshVersion]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,7 +72,7 @@ export default function SheetList({ onSelect }: Props) {
       <div className="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-600">
         <p className="font-medium text-gray-800">No sheets yet</p>
         <p className="mt-2 text-gray-500">
-          Sheets are created in your workspace or admin flow. Once they exist, they will show up here.
+          Use <span className="font-medium text-gray-700">New sheet</span> in the header to add one.
         </p>
       </div>
     );

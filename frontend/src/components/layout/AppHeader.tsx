@@ -4,9 +4,10 @@ import { tokenChipLabel, tokenTooltip } from "../../lib/githubTokenDisplay";
 interface AppHeaderProps {
   tokenStatus: GithubTokenStatus | null;
   onNavigateHome: () => void;
+  onNewSheet: () => void;
 }
 
-export function AppHeader({ tokenStatus, onNavigateHome }: AppHeaderProps) {
+export function AppHeader({ tokenStatus, onNavigateHome, onNewSheet }: AppHeaderProps) {
   const tokenOk = tokenStatus?.phase === "success";
 
   return (
@@ -22,18 +23,27 @@ export function AppHeader({ tokenStatus, onNavigateHome }: AppHeaderProps) {
             Pick a sheet to see repos and time log runs.
           </p>
         </button>
-        {tokenStatus && (
-          <span
-            title={tokenTooltip(tokenStatus)}
-            className={`inline-flex shrink-0 items-center self-start rounded-full border px-2.5 py-1 text-xs font-medium ${
-              tokenOk
-                ? "border-gray-200 bg-gray-50 text-gray-700"
-                : "border-amber-200 bg-amber-50 text-amber-900"
-            }`}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 shrink-0 sm:self-start">
+          <button
+            type="button"
+            onClick={onNewSheet}
+            className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
-            {tokenChipLabel(tokenStatus)}
-          </span>
-        )}
+            New sheet
+          </button>
+          {tokenStatus ? (
+            <span
+              title={tokenTooltip(tokenStatus)}
+              className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                tokenOk
+                  ? "border-gray-200 bg-gray-50 text-gray-700"
+                  : "border-amber-200 bg-amber-50 text-amber-900"
+              }`}
+            >
+              {tokenChipLabel(tokenStatus)}
+            </span>
+          ) : null}
+        </div>
       </div>
     </header>
   );

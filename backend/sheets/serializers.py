@@ -42,6 +42,18 @@ class SheetListSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "created_at", "updated_at"]
 
 
+class SheetCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sheet
+        fields = ["name"]
+
+    def validate_name(self, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Name is required.")
+        return cleaned
+
+
 class SheetDetailSerializer(serializers.ModelSerializer):
     repos = SheetRepoSerializer(many=True, read_only=True)
     log_entry_runs = LogEntryRunSerializer(many=True, read_only=True)
