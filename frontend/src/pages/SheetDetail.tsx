@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchSheet } from "../api/sheets";
-import type { SheetDetail as SheetDetailType } from "../types/sheet";
+import { sheetKeys } from "../lib/sheetQueryKeys";
 
 interface Props {
   sheetId: number;
@@ -8,24 +8,43 @@ interface Props {
 }
 
 export default function SheetDetail({ sheetId, onBack }: Props) {
-  const [sheet, setSheet] = useState<SheetDetailType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: sheet, isPending, isError, error, refetch, isFetching } = useQuery({
+    queryKey: sheetKeys.detail(sheetId),
+    queryFn: () => fetchSheet(sheetId),
+  });
 
-  useEffect(() => {
-    fetchSheet(sheetId)
-      .then(setSheet)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, [sheetId]);
+  if (isPending) return <p className="text-gray-500">Loading…</p>;
 
-  if (loading) return <p className="text-gray-500">Loading…</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (isError) {
+    const message = error instanceof Error ? error.message : String(error);
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          ← Back to sheets
+        </button>
+        <p className="text-red-600">{message}</p>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-800 ring-1 ring-inset ring-red-200 hover:bg-red-50 disabled:opacity-50"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (!sheet) return null;
 
   return (
     <div>
       <button
+        type="button"
         onClick={onBack}
         className="mb-4 text-sm text-blue-600 hover:underline"
       >

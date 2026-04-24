@@ -1,46 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { ChevronRightIcon } from "../components/icons/ChevronRightIcon";
 import { SheetListSkeleton } from "../components/sheet/SheetListSkeleton";
 import { fetchSheets } from "../api/sheets";
+import { sheetKeys } from "../lib/sheetQueryKeys";
 import { sheetToSummary } from "../lib/sheetSummary";
-import type { SheetSummary } from "../types/sheet";
-
 interface Props {
   onSelect: (id: number) => void;
-  /** Increment to refetch the list (e.g. after creating a sheet). */
-  refreshVersion?: number;
 }
 
-export default function SheetList({ onSelect, refreshVersion = 0 }: Props) {
-  const [sheets, setSheets] = useState<SheetSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function SheetList({ onSelect }: Props) {
   const [query, setQuery] = useState("");
-  const [loadKey, setLoadKey] = useState(0);
 
-  useEffect(() => {
-    const ac = new AbortController();
-    let active = true;
-    setLoading(true);
-    setError(null);
-    fetchSheets(ac.signal)
-      .then((rows) => {
-        if (active) setSheets(rows.map(sheetToSummary));
-      })
-      .catch((e: unknown) => {
-        if (!active) return;
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      ac.abort();
-    };
-  }, [loadKey, refreshVersion]);
+  const { data: sheets = [], isPending, isError, error, refetch, isFetching } = useQuery({
+    queryKey: sheetKeys.list(),
+    queryFn: ({ signal }) => fetchSheets(signal),
+    select: (rows) => rows.map(sheetToSummary),
+  });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -48,18 +24,18 @@ export default function SheetList({ onSelect, refreshVersion = 0 }: Props) {
     return sheets.filter((s) => s.name.toLowerCase().includes(q));
   }, [sheets, query]);
 
-  const retry = () => setLoadKey((k) => k + 1);
+  if (isPending) return <SheetListSkeleton />;
 
-  if (loading) return <SheetListSkeleton />;
-
-  if (error) {
+  if (isError) {
+    const message = error instanceof Error ? error.message : String(error);
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span>{error}</span>
+        <span>{message}</span>
         <button
           type="button"
-          onClick={retry}
-          className="shrink-0 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-800 ring-1 ring-inset ring-red-200 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="shrink-0 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-800 ring-1 ring-inset ring-red-200 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
         >
           Retry
         </button>

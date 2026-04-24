@@ -1,56 +1,61 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { createSheet } from "../../api/sheets";
+import { sheetKeys } from "../../lib/sheetQueryKeys";
 
 interface CreateSheetDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
 }
 
-export function CreateSheetDialog({ open, onClose, onCreated }: CreateSheetDialogProps) {
+export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
+  const queryClient = useQueryClient();
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: createSheet,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: sheetKeys.all });
+      onClose();
+    },
+    onError: (err: unknown) => {
+      setError(err instanceof Error ? err.message : String(err));
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
     setName("");
     setError(null);
-    setSubmitting(false);
+    createMutation.reset();
     queueMicrotask(() => inputRef.current?.focus());
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !submitting) onClose();
+      if (e.key === "Escape" && !createMutation.isPending) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, submitting]);
+  }, [open, onClose, createMutation.isPending]);
 
   if (!open) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submitting = createMutation.isPending;
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
       setError("Enter a sheet name.");
       return;
     }
-    setSubmitting(true);
     setError(null);
-    try {
-      await createSheet(trimmed);
-      onCreated();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
+    createMutation.mutate(trimmed);
   };
 
   return (

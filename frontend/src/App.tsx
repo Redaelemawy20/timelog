@@ -8,7 +8,6 @@ import SheetDetail from "./pages/SheetDetail";
 export default function App() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [sheetsRefreshVersion, setSheetsRefreshVersion] = useState(0);
   const tokenStatus = useGithubTokenStatus();
 
   return (
@@ -18,11 +17,7 @@ export default function App() {
         onNavigateHome={() => setSelectedId(null)}
         onNewSheet={() => setCreateSheetOpen(true)}
       />
-      <CreateSheetDialog
-        open={createSheetOpen}
-        onClose={() => setCreateSheetOpen(false)}
-        onCreated={() => setSheetsRefreshVersion((v) => v + 1)}
-      />
+      <CreateSheetDialog open={createSheetOpen} onClose={() => setCreateSheetOpen(false)} />
 
       <main className="max-w-3xl mx-auto px-4 py-10">
         {selectedId === null ? (
@@ -33,7 +28,7 @@ export default function App() {
             <p className="text-sm text-gray-500 mt-1 mb-6 max-w-2xl">
               Each sheet groups repositories and log entry runs for a workspace or initiative.
             </p>
-            <SheetList onSelect={setSelectedId} refreshVersion={sheetsRefreshVersion} />
+            <SheetList onSelect={setSelectedId} />
           </section>
         ) : (
           <SheetDetail sheetId={selectedId} onBack={() => setSelectedId(null)} />
