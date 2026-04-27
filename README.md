@@ -2,6 +2,20 @@
 
 Time Log is a lightweight app for organizing sheets and tracking work log entries by period, project, and repository.
 
+## Run
+
+Start the Django API, then the Vite app (`/api` is proxied to the backend).
+
+```bash
+cd backend && python manage.py runserver
+```
+
+```bash
+cd frontend && pnpm dev
+```
+
+First time only: `pip install -r backend/requirements.txt` (prefer a venv), `pnpm install` in `frontend`.
+
 ## Purpose
 
 The project helps teams keep time and activity records in one place, with a React frontend and a Django REST backend.
