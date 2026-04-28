@@ -5,8 +5,8 @@ import { fetchGithubRepos } from "../../api/github";
 import {
   addLogEntryRunDraftSchema,
   MAX_REPOS_PER_LOG_ENTRY_RUN,
-  type AddLogEntryRunDraft,
 } from "../../lib/addLogEntryRunSchema";
+import type { CreateLogEntryRunPayload } from "../../types/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +23,18 @@ import { Separator } from "@/components/ui/separator";
 interface AddLogEntryRunDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreate?: (draft: AddLogEntryRunDraft) => void;
+  onSubmit: (body: CreateLogEntryRunPayload) => Promise<void>;
+  isSubmitting?: boolean;
+  submitError?: string | null;
 }
 
-export function AddLogEntryRunDialog({ open, onClose, onCreate }: AddLogEntryRunDialogProps) {
+export function AddLogEntryRunDialog({
+  open,
+  onClose,
+  onSubmit,
+  isSubmitting = false,
+  submitError = null,
+}: AddLogEntryRunDialogProps) {
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [selectedRepoIds, setSelectedRepoIds] = useState<number[]>([]);
@@ -79,7 +87,7 @@ export function AddLogEntryRunDialog({ open, onClose, onCreate }: AddLogEntryRun
     });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const parsed = addLogEntryRunDraftSchema.safeParse({
       repoIds: selectedRepoIds,
@@ -90,15 +98,43 @@ export function AddLogEntryRunDialog({ open, onClose, onCreate }: AddLogEntryRun
       setFormError(parsed.error.issues[0]?.message ?? "Invalid input.");
       return;
     }
+    if (!repos?.length) {
+      setFormError("Repositories are not loaded.");
+      return;
+    }
+    const selectedRepos = repos.filter((r) => parsed.data.repoIds.includes(r.id));
+    if (selectedRepos.length !== parsed.data.repoIds.length) {
+      setFormError("Could not resolve selected repositories.");
+      return;
+    }
     setFormError(null);
-    onCreate?.(parsed.data);
-    onClose();
+    const body: CreateLogEntryRunPayload = {
+      range_start: parsed.data.rangeStart,
+      range_end: parsed.data.rangeEnd,
+      repos: selectedRepos.map((r) => ({
+        owner: r.owner_login,
+        name: r.name,
+        display_name: r.full_name,
+        default_branch: r.default_branch,
+      })),
+    };
+    try {
+      await onSubmit(body);
+    } catch {
+      /* Error surfaced via submitError from mutation */
+    }
   };
 
-  const submitDisabled = isPending || !!isError || !isDraftValid;
+  const submitDisabled =
+    isSubmitting || isPending || !!isError || !isDraftValid;
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isSubmitting) onClose();
+      }}
+    >
       <DialogContent className="flex max-h-[min(90vh,720px)] w-full min-w-0 max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <div className="min-w-0 shrink-0 p-6 pb-4">
           <DialogHeader>
@@ -216,12 +252,13 @@ export function AddLogEntryRunDialog({ open, onClose, onCreate }: AddLogEntryRun
 
           <div className="shrink-0 border-t bg-muted/40 px-6 py-4">
             {formError ? <p className="mb-3 text-sm text-destructive">{formError}</p> : null}
+            {submitError ? <p className="mb-3 text-sm text-destructive">{submitError}</p> : null}
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={submitDisabled}>
-                Create
+                {isSubmitting ? "Creating…" : "Create"}
               </Button>
             </div>
           </div>

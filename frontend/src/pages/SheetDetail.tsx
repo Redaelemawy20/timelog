@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { fetchSheet } from "../api/sheets";
+import { useEffect, useState } from "react";
+import { createLogEntryRun, fetchSheet } from "../api/sheets";
 import { AddLogEntryRunDialog } from "../components/sheet/AddLogEntryRunDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { CreateLogEntryRunPayload } from "../types/sheet";
 
 interface Props {
   sheetId: number;
@@ -17,7 +18,20 @@ interface Props {
 }
 
 export default function SheetDetail({ sheetId, onBack }: Props) {
+  const queryClient = useQueryClient();
   const [addRunOpen, setAddRunOpen] = useState(false);
+  const createRun = useMutation({
+    mutationFn: (body: CreateLogEntryRunPayload) => createLogEntryRun(sheetId, body),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
+      setAddRunOpen(false);
+    },
+  });
+
+  useEffect(() => {
+    if (addRunOpen) createRun.reset();
+  }, [addRunOpen]);
+
   const { data: sheet, isPending, isError, error, refetch, isFetching } = useQuery({
     queryKey: sheetKeys.detail(sheetId),
     queryFn: () => fetchSheet(sheetId),
@@ -67,7 +81,17 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
 
   return (
     <div>
-      <AddLogEntryRunDialog open={addRunOpen} onClose={() => setAddRunOpen(false)} />
+      <AddLogEntryRunDialog
+        open={addRunOpen}
+        onClose={() => {
+          if (!createRun.isPending) setAddRunOpen(false);
+        }}
+        isSubmitting={createRun.isPending}
+        submitError={
+          createRun.error instanceof Error ? createRun.error.message : null
+        }
+        onSubmit={(body) => createRun.mutateAsync(body)}
+      />
       <Button type="button" variant="ghost" size="sm" className="mb-4 gap-1 px-0" onClick={onBack}>
         <ArrowLeft className="size-4" aria-hidden />
         Back to sheets
@@ -132,13 +156,23 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
                           </tr>
                         </thead>
                         <tbody>
-                          {run.log_entries.map((entry) => (
-                            <tr key={entry.id} className="border-b border-border/60 last:border-0">
-                              <td className="py-2 pr-4 text-foreground">{entry.project}</td>
-                              <td className="py-2 pr-4 text-muted-foreground">{entry.task || "—"}</td>
-                              <td className="py-2 text-foreground">{entry.time_hours ?? "—"}</td>
-                            </tr>
-                          ))}
+                          {run.log_entries.map((entry) => {
+                            const taskText =
+                              entry.task.trim() ||
+                              entry.commit_messages.split("\n")[0]?.trim() ||
+                              "";
+                            return (
+                              <tr key={entry.id} className="border-b border-border/60 last:border-0">
+                                <td className="py-2 pr-4 text-foreground">{entry.project}</td>
+                                <td className="max-w-md py-2 pr-4 text-muted-foreground">
+                                  <span className="line-clamp-3 whitespace-pre-wrap wrap-break-word">
+                                    {taskText || "—"}
+                                  </span>
+                                </td>
+                                <td className="py-2 text-foreground">{entry.time_hours ?? "—"}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

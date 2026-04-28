@@ -1,5 +1,5 @@
 import { API_BASE } from "./client";
-import type { Sheet, SheetDetail } from "../types/sheet";
+import type { CreateLogEntryRunPayload, Sheet, SheetDetail } from "../types/sheet";
 
 export async function fetchSheets(signal?: AbortSignal): Promise<Sheet[]> {
   const res = await fetch(`${API_BASE}/sheets/`, { signal });
@@ -11,6 +11,31 @@ export async function fetchSheet(id: number): Promise<SheetDetail> {
   const res = await fetch(`${API_BASE}/sheets/${id}/`);
   if (!res.ok) throw new Error(`Failed to fetch sheet ${id}: ${res.status}`);
   return res.json() as Promise<SheetDetail>;
+}
+
+export async function createLogEntryRun(
+  sheetId: number,
+  body: CreateLogEntryRunPayload,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/sheets/${sheetId}/log-entry-runs/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let message = `Failed to create log entry run (${res.status})`;
+    try {
+      const parsed = (await res.json()) as Record<string, unknown>;
+      if (typeof parsed.detail === "string") {
+        message = parsed.detail;
+      } else if (typeof parsed.detail === "object" && parsed.detail !== null) {
+        message = JSON.stringify(parsed.detail);
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
 }
 
 export async function createSheet(name: string): Promise<Sheet> {

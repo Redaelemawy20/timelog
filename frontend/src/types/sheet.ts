@@ -14,6 +14,7 @@ export interface LogEntry {
   time_hours: string | null;
   project: string;
   notes: string | null;
+  commit_messages: string;
   created_at: string;
   updated_at: string;
 }
@@ -43,4 +44,17 @@ export interface SheetSummary extends Sheet {
 export interface SheetDetail extends Sheet {
   repos: SheetRepo[];
   log_entry_runs: LogEntryRun[];
+}
+
+export interface CreateLogEntryRunRepoRef {
+  owner: string;
+  name: string;
+  display_name?: string | null;
+  default_branch?: string | null;
+}
+
+export interface CreateLogEntryRunPayload {
+  range_start: string;
+  range_end: string;
+  repos: CreateLogEntryRunRepoRef[];
 }
