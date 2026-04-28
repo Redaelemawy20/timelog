@@ -5,6 +5,12 @@ export interface SheetRepo {
   display_name: string | null;
 }
 
+export interface StoredCommit {
+  sha?: string;
+  message?: string;
+  date?: string;
+}
+
 export interface LogEntry {
   id: number;
   repo: SheetRepo;
@@ -15,6 +21,7 @@ export interface LogEntry {
   project: string;
   notes: string | null;
   commit_messages: string;
+  raw_commits_json: StoredCommit[] | null;
   created_at: string;
   updated_at: string;
 }

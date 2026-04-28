@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createLogEntryRun, fetchSheet } from "../api/sheets";
 import { AddLogEntryRunDialog } from "../components/sheet/AddLogEntryRunDialog";
+import { LogEntryRunDetailDialog } from "../components/sheet/LogEntryRunDetailDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CreateLogEntryRunPayload } from "../types/sheet";
+import type { CreateLogEntryRunPayload, LogEntryRun } from "../types/sheet";
 
 interface Props {
   sheetId: number;
@@ -20,6 +21,7 @@ interface Props {
 export default function SheetDetail({ sheetId, onBack }: Props) {
   const queryClient = useQueryClient();
   const [addRunOpen, setAddRunOpen] = useState(false);
+  const [detailRun, setDetailRun] = useState<LogEntryRun | null>(null);
   const createRun = useMutation({
     mutationFn: (body: CreateLogEntryRunPayload) => createLogEntryRun(sheetId, body),
     onSuccess: async () => {
@@ -81,6 +83,12 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
 
   return (
     <div>
+      <LogEntryRunDetailDialog
+        open={detailRun !== null}
+        onClose={() => setDetailRun(null)}
+        sheetName={sheet.name}
+        run={detailRun}
+      />
       <AddLogEntryRunDialog
         open={addRunOpen}
         onClose={() => {
@@ -134,16 +142,26 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
                     <span className="font-medium text-foreground">
                       {run.range_start} → {run.range_end}
                     </span>
-                    <Badge
-                      variant="outline"
-                      className={
-                        run.status === "saved"
-                          ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
-                          : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-                      }
-                    >
-                      {run.status}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDetailRun(run)}
+                      >
+                        Details
+                      </Button>
+                      <Badge
+                        variant="outline"
+                        className={
+                          run.status === "saved"
+                            ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
+                            : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                        }
+                      >
+                        {run.status}
+                      </Badge>
+                    </div>
                   </div>
                   {run.log_entries.length > 0 ? (
                     <div>

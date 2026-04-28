@@ -26,6 +26,7 @@ class LogEntrySerializer(serializers.ModelSerializer):
             "project",
             "notes",
             "commit_messages",
+            "raw_commits_json",
             "created_at",
             "updated_at",
         ]
