@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { SheetListSkeleton } from "../components/sheet/SheetListSkeleton";
 import { fetchSheets } from "../api/sheets";
 import { sheetKeys } from "../lib/sheetQueryKeys";
@@ -11,11 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface Props {
-  onSelect: (id: number) => void;
-}
-
-export default function SheetList({ onSelect }: Props) {
+export default function SheetList() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
   const { data: sheets = [], isPending, isError, error, refetch, isFetching } = useQuery({
@@ -102,7 +100,7 @@ export default function SheetList({ onSelect }: Props) {
             <li key={sheet.id}>
               <button
                 type="button"
-                onClick={() => onSelect(sheet.id)}
+                onClick={() => navigate(`/sheets/${sheet.id}`)}
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
               >
                 <span className="min-w-0 flex-1">

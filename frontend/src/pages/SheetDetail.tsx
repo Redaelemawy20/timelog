@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { createSprint, fetchSheet, updateSprintSummary } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SprintCard } from "../components/sheet/SprintCard";
@@ -11,16 +12,35 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CreateSprintPayload, Sprint } from "../types/sheet";
-
-interface Props {
-  sheetId: number;
-  onBack: () => void;
-}
-
-export default function SheetDetail({ sheetId, onBack }: Props) {
+export default function SheetDetail() {
+  const params = useParams<{ sheetId: string }>();
+  const navigate = useNavigate();
+  const parsedId = Number(params.sheetId);
+  const sheetId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : null;
   const queryClient = useQueryClient();
   const [addSprintOpen, setAddSprintOpen] = useState(false);
   const [detailSprint, setDetailSprint] = useState<Sprint | null>(null);
+
+  if (sheetId === null) {
+    return (
+      <div className="space-y-4">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1 px-0"
+          onClick={() => navigate("/")}
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to sheets
+        </Button>
+        <Alert variant="destructive">
+          <AlertTitle>Invalid sheet route</AlertTitle>
+          <AlertDescription>Sheet id is missing or invalid.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
   const createRun = useMutation({
     mutationFn: (body: CreateSprintPayload) => createSprint(sheetId, body),
     onSuccess: async () => {
@@ -64,7 +84,13 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
     const message = error instanceof Error ? error.message : String(error);
     return (
       <div className="space-y-4">
-        <Button type="button" variant="ghost" size="sm" className="gap-1 px-0" onClick={onBack}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1 px-0"
+          onClick={() => navigate("/")}
+        >
           <ArrowLeft className="size-4" aria-hidden />
           Back to sheets
         </Button>
@@ -106,7 +132,13 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
         }
         onSubmit={(body) => createRun.mutateAsync(body)}
       />
-      <Button type="button" variant="ghost" size="sm" className="mb-4 gap-1 px-0" onClick={onBack}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="mb-4 gap-1 px-0"
+        onClick={() => navigate("/")}
+      >
         <ArrowLeft className="size-4" aria-hidden />
         Back to sheets
       </Button>
