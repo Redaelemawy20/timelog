@@ -13,13 +13,13 @@ from .github_token import (
     resolve_token_path,
     verify_github_token,
 )
-from .models import LogEntry, LogEntryRun, Sheet, SheetRepo
+from .models import Sheet, SheetRepo, Sprint, SprintRepo
 from .serializers import (
-    LogEntryRunCreateSerializer,
-    LogEntryRunSerializer,
     SheetCreateSerializer,
     SheetDetailSerializer,
     SheetListSerializer,
+    SprintCreateSerializer,
+    SprintSerializer,
 )
 
 
@@ -42,9 +42,9 @@ def api_sheet_detail(request: Request, sheet_id: int) -> Response:
 
 
 @api_view(["POST"])
-def api_log_entry_run_create(request: Request, sheet_id: int) -> Response:
+def api_sprint_create(request: Request, sheet_id: int) -> Response:
     sheet = get_object_or_404(Sheet, pk=sheet_id)
-    create = LogEntryRunCreateSerializer(data=request.data)
+    create = SprintCreateSerializer(data=request.data)
     create.is_valid(raise_exception=True)
     data = create.validated_data
     range_start = data["range_start"]
@@ -97,11 +97,13 @@ def api_log_entry_run_create(request: Request, sheet_id: int) -> Response:
         prepared.append((owner, name, display_name, branch, commits))
 
     with transaction.atomic():
-        run = LogEntryRun.objects.create(
+        sprint = Sprint.objects.create(
             sheet=sheet,
             range_start=range_start,
             range_end=range_end,
-            status=LogEntryRun.Status.DRAFT,
+            status=Sprint.Status.DRAFT,
+            summary="",
+            time_hours=None,
         )
         for owner, name, display_name, _branch, commits in prepared:
             sheet_repo, _ = SheetRepo.objects.get_or_create(
@@ -113,25 +115,18 @@ def api_log_entry_run_create(request: Request, sheet_id: int) -> Response:
             messages_joined = "\n\n".join(
                 c["message"] for c in commits if isinstance(c.get("message"), str) and c["message"]
             )
-            task_preview = ""
-            if messages_joined:
-                task_preview = messages_joined.split("\n", 1)[0][:512]
-            LogEntry.objects.create(
+            SprintRepo.objects.create(
                 sheet=sheet,
-                run=run,
+                sprint=sprint,
                 sheet_repo=sheet_repo,
-                period_start=range_start,
-                period_end=range_end,
                 project=name,
-                task=task_preview,
-                time_hours=None,
                 notes=None,
                 commit_messages=messages_joined,
                 raw_commits_json=commits,
             )
 
-    run = LogEntryRun.objects.prefetch_related("log_entries__sheet_repo").get(pk=run.pk)
-    return Response(LogEntryRunSerializer(run).data, status=status.HTTP_201_CREATED)
+    sprint = Sprint.objects.prefetch_related("sprint_repos__sheet_repo").get(pk=sprint.pk)
+    return Response(SprintSerializer(sprint).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])

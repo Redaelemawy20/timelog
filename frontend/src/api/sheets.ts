@@ -1,5 +1,5 @@
 import { API_BASE } from "./client";
-import type { CreateLogEntryRunPayload, Sheet, SheetDetail } from "../types/sheet";
+import type { CreateSprintPayload, Sheet, SheetDetail } from "../types/sheet";
 
 export async function fetchSheets(signal?: AbortSignal): Promise<Sheet[]> {
   const res = await fetch(`${API_BASE}/sheets/`, { signal });
@@ -13,17 +13,17 @@ export async function fetchSheet(id: number): Promise<SheetDetail> {
   return res.json() as Promise<SheetDetail>;
 }
 
-export async function createLogEntryRun(
+export async function createSprint(
   sheetId: number,
-  body: CreateLogEntryRunPayload,
+  body: CreateSprintPayload,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${sheetId}/log-entry-runs/`, {
+  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    let message = `Failed to create log entry run (${res.status})`;
+    let message = `Failed to create sprint (${res.status})`;
     try {
       const parsed = (await res.json()) as Record<string, unknown>;
       if (typeof parsed.detail === "string") {

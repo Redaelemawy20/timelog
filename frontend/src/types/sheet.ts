@@ -11,13 +11,9 @@ export interface StoredCommit {
   date?: string;
 }
 
-export interface LogEntry {
+export interface SprintRepo {
   id: number;
   repo: SheetRepo;
-  period_start: string;
-  period_end: string;
-  task: string;
-  time_hours: string | null;
   project: string;
   notes: string | null;
   commit_messages: string;
@@ -26,13 +22,15 @@ export interface LogEntry {
   updated_at: string;
 }
 
-export interface LogEntryRun {
+export interface Sprint {
   id: number;
   range_start: string;
   range_end: string;
   status: "draft" | "saved";
+  summary: string;
+  time_hours: string | null;
   created_at: string;
-  log_entries: LogEntry[];
+  sprint_repos: SprintRepo[];
 }
 
 export interface Sheet {
@@ -50,18 +48,18 @@ export interface SheetSummary extends Sheet {
 
 export interface SheetDetail extends Sheet {
   repos: SheetRepo[];
-  log_entry_runs: LogEntryRun[];
+  sprints: Sprint[];
 }
 
-export interface CreateLogEntryRunRepoRef {
+export interface CreateSprintRepoRef {
   owner: string;
   name: string;
   display_name?: string | null;
   default_branch?: string | null;
 }
 
-export interface CreateLogEntryRunPayload {
+export interface CreateSprintPayload {
   range_start: string;
   range_end: string;
-  repos: CreateLogEntryRunRepoRef[];
+  repos: CreateSprintRepoRef[];
 }

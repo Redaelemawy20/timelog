@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from .models import LogEntry, LogEntryRun, Sheet, SheetRepo
+from .models import Sheet, SheetRepo, Sprint, SprintRepo
 
-MAX_REPOS_PER_LOG_ENTRY_RUN = 3
+MAX_REPOS_PER_SPRINT = 3
 
 
 class SheetRepoSerializer(serializers.ModelSerializer):
@@ -11,18 +11,14 @@ class SheetRepoSerializer(serializers.ModelSerializer):
         fields = ["id", "owner", "name", "display_name"]
 
 
-class LogEntrySerializer(serializers.ModelSerializer):
+class SprintRepoSerializer(serializers.ModelSerializer):
     repo = SheetRepoSerializer(source="sheet_repo")
 
     class Meta:
-        model = LogEntry
+        model = SprintRepo
         fields = [
             "id",
             "repo",
-            "period_start",
-            "period_end",
-            "task",
-            "time_hours",
             "project",
             "notes",
             "commit_messages",
@@ -32,12 +28,21 @@ class LogEntrySerializer(serializers.ModelSerializer):
         ]
 
 
-class LogEntryRunSerializer(serializers.ModelSerializer):
-    log_entries = LogEntrySerializer(many=True, read_only=True)
+class SprintSerializer(serializers.ModelSerializer):
+    sprint_repos = SprintRepoSerializer(many=True, read_only=True)
 
     class Meta:
-        model = LogEntryRun
-        fields = ["id", "range_start", "range_end", "status", "created_at", "log_entries"]
+        model = Sprint
+        fields = [
+            "id",
+            "range_start",
+            "range_end",
+            "status",
+            "summary",
+            "time_hours",
+            "created_at",
+            "sprint_repos",
+        ]
 
 
 class SheetListSerializer(serializers.ModelSerializer):
@@ -60,11 +65,11 @@ class SheetCreateSerializer(serializers.ModelSerializer):
 
 class SheetDetailSerializer(serializers.ModelSerializer):
     repos = SheetRepoSerializer(many=True, read_only=True)
-    log_entry_runs = LogEntryRunSerializer(many=True, read_only=True)
+    sprints = SprintSerializer(many=True, read_only=True)
 
     class Meta:
         model = Sheet
-        fields = ["id", "name", "created_at", "updated_at", "repos", "log_entry_runs"]
+        fields = ["id", "name", "created_at", "updated_at", "repos", "sprints"]
 
 
 class RepoRefSerializer(serializers.Serializer):
@@ -91,7 +96,7 @@ class RepoRefSerializer(serializers.Serializer):
         return cleaned
 
 
-class LogEntryRunCreateSerializer(serializers.Serializer):
+class SprintCreateSerializer(serializers.Serializer):
     range_start = serializers.DateField()
     range_end = serializers.DateField()
     repos = RepoRefSerializer(many=True)
@@ -106,10 +111,10 @@ class LogEntryRunCreateSerializer(serializers.Serializer):
         repos = attrs.get("repos") or []
         if len(repos) < 1:
             raise serializers.ValidationError({"repos": "Select at least one repository."})
-        if len(repos) > MAX_REPOS_PER_LOG_ENTRY_RUN:
+        if len(repos) > MAX_REPOS_PER_SPRINT:
             raise serializers.ValidationError(
                 {
-                    "repos": f"You can select at most {MAX_REPOS_PER_LOG_ENTRY_RUN} repositories."
+                    "repos": f"You can select at most {MAX_REPOS_PER_SPRINT} repositories."
                 }
             )
         return attrs

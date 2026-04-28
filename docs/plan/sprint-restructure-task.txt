@@ -1,0 +1,95 @@
+Sprint restructure task (clean reset, no extras)
+===============================================
+
+Goal
+----
+Restructure the app data model from log-entry terminology to sprint terminology,
+using a clean database reset. Implement only the rename/restructure work and
+do not add extra features in this phase.
+
+Context and source of truth
+---------------------------
+- A sprint is the weekly/sprint period card shown in sheet details.
+- One sprint may include work across multiple repos/projects.
+- Sprint-level data is the single source of truth for period-level information.
+- Per-repo rows exist only to hold repo-specific commit evidence for the sprint.
+
+Final proposed database structure
+---------------------------------
+sheets
+------
+- id, name, created_at, updated_at
+
+sheet_repos
+-----------
+- id, sheet_id, owner, name, display_name
+- Unique on (sheet_id, owner, name)
+
+sprints (rename from log_entry_runs)
+------------------------------------
+- id
+- sheet_id (FK -> sheets)
+- range_start (date)
+- range_end (date)
+- status (draft/saved)
+- summary (text, blank allowed)
+- time_hours (decimal, nullable/blank)
+- created_at
+- Indexes: sheet_id
+
+sprint_repos (rename from log_entries)
+--------------------------------------
+- id
+- sheet_id (FK -> sheets)
+- sprint_id (FK -> sprints)
+- sheet_repo_id (FK -> sheet_repos)
+- project (string, default repo name)
+- notes (nullable/blank if still needed)
+- commit_messages (text)
+- raw_commits_json (json, nullable/blank)
+- created_at, updated_at
+- Unique on (sprint_id, sheet_repo_id)
+- Indexes: sheet_id, sprint_id, sheet_repo_id
+
+Columns to remove from sprint_repos
+-----------------------------------
+- task
+- period_start
+- period_end
+- time_hours (moved to sprints)
+
+Implementation scope (only restructure)
+---------------------------------------
+1) Database reset
+- Recreate local DB to start clean.
+- Apply migrations from the new structure only.
+
+2) Backend rename/refactor
+- Rename model references:
+  - LogEntryRun -> Sprint
+  - LogEntry -> SprintRepo
+- Rename serializer/view/url naming from log-entry-runs/log-entries to sprints/sprint-repos.
+- Update sheet detail response to expose:
+  - sprints
+  - nested sprint_repos
+- Ensure create sprint flow still fetches commits and stores sprint_repos rows.
+
+3) Frontend rename/refactor
+- Update types/interfaces and API client naming to sprint/sprint_repo terms.
+- Update sheet detail UI to consume sprints list and nested sprint_repos.
+- Keep sprint card summary and sprint hours fields in UI model binding.
+
+Non-goals for this task
+-----------------------
+- No LLM generation endpoint yet.
+- No backward-compatibility aliases for old API names.
+- No extra metadata fields beyond the structure above.
+- No additional feature work unrelated to rename/restructure.
+
+Definition of done
+------------------
+- App runs with a clean recreated DB.
+- Old log-entry naming removed from active backend/frontend paths.
+- Sprint cards load from `sprints` data.
+- Sprint-level summary and time_hours are persisted on `sprints`.
+- Sprint repo rows persist commit evidence in `sprint_repos`.

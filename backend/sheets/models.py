@@ -33,14 +33,16 @@ class SheetRepo(models.Model):
         return f"{self.owner}/{self.name}"
 
 
-class LogEntryRun(models.Model):
+class Sprint(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         SAVED = "saved", "Saved"
 
-    sheet = models.ForeignKey(Sheet, on_delete=models.CASCADE, related_name="log_entry_runs")
+    sheet = models.ForeignKey(Sheet, on_delete=models.CASCADE, related_name="sprints")
     range_start = models.DateField()
     range_end = models.DateField()
+    summary = models.TextField(blank=True)
+    time_hours = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
         max_length=16,
@@ -50,31 +52,28 @@ class LogEntryRun(models.Model):
     )
 
     class Meta:
-        db_table = "log_entry_runs"
+        db_table = "sprints"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["sheet"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.sheet_id} {self.range_start}–{self.range_end}"
 
 
-class LogEntry(models.Model):
-    sheet = models.ForeignKey(Sheet, on_delete=models.CASCADE, related_name="log_entries")
-    run = models.ForeignKey(
-        LogEntryRun,
+class SprintRepo(models.Model):
+    sheet = models.ForeignKey(Sheet, on_delete=models.CASCADE, related_name="sprint_repos")
+    sprint = models.ForeignKey(
+        Sprint,
         on_delete=models.CASCADE,
-        related_name="log_entries",
-        null=True,
-        blank=True,
+        related_name="sprint_repos",
     )
     sheet_repo = models.ForeignKey(
         SheetRepo,
         on_delete=models.PROTECT,
-        related_name="log_entries",
+        related_name="sprint_repos",
     )
-    period_start = models.DateField()
-    period_end = models.DateField()
-    task = models.CharField(max_length=512, blank=True)
-    time_hours = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     project = models.CharField(max_length=255)
     notes = models.TextField(blank=True, null=True)
     commit_messages = models.TextField(blank=True)
@@ -83,15 +82,19 @@ class LogEntry(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "log_entries"
+        db_table = "sprint_repos"
         ordering = ["-updated_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["run", "sheet_repo"],
-                condition=models.Q(run__isnull=False),
-                name="unique_run_sheet_repo",
+                fields=["sprint", "sheet_repo"],
+                name="unique_sprint_sheet_repo",
             ),
+        ]
+        indexes = [
+            models.Index(fields=["sheet"]),
+            models.Index(fields=["sprint"]),
+            models.Index(fields=["sheet_repo"]),
         ]
 
     def __str__(self) -> str:
-        return f"{self.project} ({self.period_start})"
+        return f"{self.project} ({self.sprint_id})"

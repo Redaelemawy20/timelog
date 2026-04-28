@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createLogEntryRun, fetchSheet } from "../api/sheets";
-import { AddLogEntryRunDialog } from "../components/sheet/AddLogEntryRunDialog";
-import { LogEntryRunDetailDialog } from "../components/sheet/LogEntryRunDetailDialog";
+import { createSprint, fetchSheet } from "../api/sheets";
+import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
+import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CreateLogEntryRunPayload, LogEntryRun } from "../types/sheet";
+import type { CreateSprintPayload, Sprint } from "../types/sheet";
 
 interface Props {
   sheetId: number;
@@ -20,19 +20,19 @@ interface Props {
 
 export default function SheetDetail({ sheetId, onBack }: Props) {
   const queryClient = useQueryClient();
-  const [addRunOpen, setAddRunOpen] = useState(false);
-  const [detailRun, setDetailRun] = useState<LogEntryRun | null>(null);
+  const [addSprintOpen, setAddSprintOpen] = useState(false);
+  const [detailSprint, setDetailSprint] = useState<Sprint | null>(null);
   const createRun = useMutation({
-    mutationFn: (body: CreateLogEntryRunPayload) => createLogEntryRun(sheetId, body),
+    mutationFn: (body: CreateSprintPayload) => createSprint(sheetId, body),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
-      setAddRunOpen(false);
+      setAddSprintOpen(false);
     },
   });
 
   useEffect(() => {
-    if (addRunOpen) createRun.reset();
-  }, [addRunOpen]);
+    if (addSprintOpen) createRun.reset();
+  }, [addSprintOpen]);
 
   const { data: sheet, isPending, isError, error, refetch, isFetching } = useQuery({
     queryKey: sheetKeys.detail(sheetId),
@@ -83,16 +83,16 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
 
   return (
     <div>
-      <LogEntryRunDetailDialog
-        open={detailRun !== null}
-        onClose={() => setDetailRun(null)}
+      <SprintDetailDialog
+        open={detailSprint !== null}
+        onClose={() => setDetailSprint(null)}
         sheetName={sheet.name}
-        run={detailRun}
+        sprint={detailSprint}
       />
-      <AddLogEntryRunDialog
-        open={addRunOpen}
+      <AddSprintDialog
+        open={addSprintOpen}
         onClose={() => {
-          if (!createRun.isPending) setAddRunOpen(false);
+          if (!createRun.isPending) setAddSprintOpen(false);
         }}
         isSubmitting={createRun.isPending}
         submitError={
@@ -127,67 +127,68 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Log entry runs
+            Sprints
           </h3>
-          <Button type="button" size="sm" onClick={() => setAddRunOpen(true)}>
-            Add run
+          <Button type="button" size="sm" onClick={() => setAddSprintOpen(true)}>
+            Add sprint
           </Button>
         </div>
-        {sheet.log_entry_runs.length ? (
+        {sheet.sprints.length ? (
           <div className="space-y-4">
-            {sheet.log_entry_runs.map((run) => (
-              <Card key={run.id} size="sm" className="shadow-sm">
+            {sheet.sprints.map((sprint) => (
+              <Card key={sprint.id} size="sm" className="shadow-sm">
                 <CardContent className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium text-foreground">
-                      {run.range_start} → {run.range_end}
+                      {sprint.range_start} → {sprint.range_end}
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setDetailRun(run)}
+                        onClick={() => setDetailSprint(sprint)}
                       >
                         Details
                       </Button>
                       <Badge
                         variant="outline"
                         className={
-                          run.status === "saved"
+                          sprint.status === "saved"
                             ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
                             : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
                         }
                       >
-                        {run.status}
+                        {sprint.status}
                       </Badge>
                     </div>
                   </div>
-                  {run.log_entries.length > 0 ? (
-                    <div>
+                  {sprint.summary.trim() ? (
+                    <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                      {sprint.summary}
+                    </p>
+                  ) : null}
+                  <p className="text-sm text-foreground">Hours: {sprint.time_hours ?? "—"}</p>
+                  {sprint.sprint_repos.length > 0 ? (
+                    <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm">
                         <thead>
                           <tr className="border-b border-border text-xs text-muted-foreground">
                             <th className="pb-2 pr-4 font-medium">Project</th>
-                            <th className="pb-2 pr-4 font-medium">Task</th>
-                            <th className="pb-2 font-medium">Hours</th>
+                            <th className="pb-2 font-medium">Commit preview</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {run.log_entries.map((entry) => {
-                            const taskText =
-                              entry.task.trim() ||
-                              entry.commit_messages.split("\n")[0]?.trim() ||
-                              "";
+                          {sprint.sprint_repos.map((entry) => {
+                            const commitPreview = entry.commit_messages.split("\n")[0]?.trim() || "";
                             return (
                               <tr key={entry.id} className="border-b border-border/60 last:border-0">
                                 <td className="py-2 pr-4 text-foreground">{entry.project}</td>
-                                <td className="max-w-md py-2 pr-4 text-muted-foreground">
+                                <td className="max-w-md py-2 text-muted-foreground">
                                   <span className="line-clamp-3 whitespace-pre-wrap wrap-break-word">
-                                    {taskText || "—"}
+                                    {commitPreview || "—"}
                                   </span>
                                 </td>
-                                <td className="py-2 text-foreground">{entry.time_hours ?? "—"}</td>
                               </tr>
                             );
                           })}
@@ -200,7 +201,7 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No runs yet.</p>
+          <p className="text-sm text-muted-foreground">No sprints yet.</p>
         )}
       </section>
     </div>

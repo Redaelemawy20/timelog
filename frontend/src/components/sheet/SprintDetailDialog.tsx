@@ -8,17 +8,17 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { LogEntry, LogEntryRun, StoredCommit } from "../../types/sheet";
+import type { Sprint, SprintRepo, StoredCommit } from "../../types/sheet";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   sheetName: string;
-  run: LogEntryRun | null;
+  sprint: Sprint | null;
 }
 
 function formatCommitDate(iso: string | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString(undefined, {
@@ -28,12 +28,12 @@ function formatCommitDate(iso: string | undefined): string {
 }
 
 function shortSha(sha: string | undefined): string {
-  if (!sha || typeof sha !== "string") return "—";
+  if (!sha || typeof sha !== "string") return "-";
   const s = sha.trim();
   return s.length >= 7 ? s.slice(0, 7) : s;
 }
 
-function commitsForTable(entry: LogEntry): StoredCommit[] {
+function commitsForTable(entry: SprintRepo): StoredCommit[] {
   const raw = entry.raw_commits_json;
   if (Array.isArray(raw) && raw.length > 0) {
     return raw.filter((c): c is StoredCommit => c != null && typeof c === "object");
@@ -50,7 +50,7 @@ function commitsForTable(entry: LogEntry): StoredCommit[] {
   return [];
 }
 
-export function LogEntryRunDetailDialog({ open, onClose, sheetName, run }: Props) {
+export function SprintDetailDialog({ open, onClose, sheetName, sprint }: Props) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
@@ -59,23 +59,23 @@ export function LogEntryRunDetailDialog({ open, onClose, sheetName, run }: Props
       >
         <div className="shrink-0 border-b px-6 py-4">
           <DialogHeader className="gap-2 text-left">
-            <DialogTitle className="pr-8">Run details</DialogTitle>
+            <DialogTitle className="pr-8">Sprint details</DialogTitle>
             <DialogDescription className="space-y-2 text-left">
               <span className="block font-medium text-foreground">{sheetName}</span>
-              {run ? (
+              {sprint ? (
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-muted-foreground">
-                    {run.range_start} → {run.range_end}
+                    {sprint.range_start} to {sprint.range_end}
                   </span>
                   <Badge
                     variant="outline"
                     className={
-                      run.status === "saved"
+                      sprint.status === "saved"
                         ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
                         : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
                     }
                   >
-                    {run.status}
+                    {sprint.status}
                   </Badge>
                 </span>
               ) : null}
@@ -85,15 +85,14 @@ export function LogEntryRunDetailDialog({ open, onClose, sheetName, run }: Props
 
         <div className="min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-6">
           <div className="py-4 pr-1">
-            {!run ? (
-              <p className="text-sm text-muted-foreground">No run selected.</p>
-            ) : run.log_entries.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No repositories in this run.</p>
+            {!sprint ? (
+              <p className="text-sm text-muted-foreground">No sprint selected.</p>
+            ) : sprint.sprint_repos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No repositories in this sprint.</p>
             ) : (
               <div className="space-y-6">
-                {run.log_entries.map((entry, idx) => {
-                  const label =
-                    entry.repo.display_name ?? `${entry.repo.owner}/${entry.repo.name}`;
+                {sprint.sprint_repos.map((entry, idx) => {
+                  const label = entry.repo.display_name ?? `${entry.repo.owner}/${entry.repo.name}`;
                   const rows = commitsForTable(entry);
                   return (
                     <section key={entry.id}>
@@ -103,7 +102,7 @@ export function LogEntryRunDetailDialog({ open, onClose, sheetName, run }: Props
                         <p className="text-sm text-muted-foreground">No commits in range.</p>
                       ) : (
                         <div className="overflow-x-auto rounded-md border border-border">
-                          <table className="w-full min-w-[520px] text-left text-sm">
+                          <table className="w-full min-w-130 text-left text-sm">
                             <thead>
                               <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
                                 <th className="px-3 py-2 font-medium whitespace-nowrap">Date</th>
@@ -124,7 +123,7 @@ export function LogEntryRunDetailDialog({ open, onClose, sheetName, run }: Props
                                     {shortSha(c.sha)}
                                   </td>
                                   <td className="max-w-md px-3 py-2 align-top whitespace-pre-wrap wrap-break-word">
-                                    {c.message?.trim() || "—"}
+                                    {c.message?.trim() || "-"}
                                   </td>
                                 </tr>
                               ))}

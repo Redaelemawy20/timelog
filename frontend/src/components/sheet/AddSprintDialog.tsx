@@ -2,11 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { fetchGithubRepos } from "../../api/github";
-import {
-  addLogEntryRunDraftSchema,
-  MAX_REPOS_PER_LOG_ENTRY_RUN,
-} from "../../lib/addLogEntryRunSchema";
-import type { CreateLogEntryRunPayload } from "../../types/sheet";
+import { addSprintDraftSchema, MAX_REPOS_PER_SPRINT } from "../../lib/addSprintSchema";
+import type { CreateSprintPayload } from "../../types/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,32 +17,27 @@ import { DatePickerField } from "@/components/ui/date-picker-field";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-interface AddLogEntryRunDialogProps {
+interface AddSprintDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (body: CreateLogEntryRunPayload) => Promise<void>;
+  onSubmit: (body: CreateSprintPayload) => Promise<void>;
   isSubmitting?: boolean;
   submitError?: string | null;
 }
 
-export function AddLogEntryRunDialog({
+export function AddSprintDialog({
   open,
   onClose,
   onSubmit,
   isSubmitting = false,
   submitError = null,
-}: AddLogEntryRunDialogProps) {
+}: AddSprintDialogProps) {
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [selectedRepoIds, setSelectedRepoIds] = useState<number[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const {
-    data: repos,
-    isPending,
-    isError,
-    error,
-  } = useQuery({
+  const { data: repos, isPending, isError, error } = useQuery({
     queryKey: ["github-repos"],
     queryFn: fetchGithubRepos,
     enabled: open,
@@ -62,7 +54,7 @@ export function AddLogEntryRunDialog({
 
   const isDraftValid = useMemo(
     () =>
-      addLogEntryRunDraftSchema.safeParse({
+      addSprintDraftSchema.safeParse({
         repoIds: selectedRepoIds,
         rangeStart,
         rangeEnd,
@@ -76,10 +68,8 @@ export function AddLogEntryRunDialog({
         setFormError(null);
         return prev.filter((x) => x !== id);
       }
-      if (prev.length >= MAX_REPOS_PER_LOG_ENTRY_RUN) {
-        setFormError(
-          `You can select at most ${MAX_REPOS_PER_LOG_ENTRY_RUN} repositories.`,
-        );
+      if (prev.length >= MAX_REPOS_PER_SPRINT) {
+        setFormError(`You can select at most ${MAX_REPOS_PER_SPRINT} repositories.`);
         return prev;
       }
       setFormError(null);
@@ -89,7 +79,7 @@ export function AddLogEntryRunDialog({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const parsed = addLogEntryRunDraftSchema.safeParse({
+    const parsed = addSprintDraftSchema.safeParse({
       repoIds: selectedRepoIds,
       rangeStart,
       rangeEnd,
@@ -108,7 +98,7 @@ export function AddLogEntryRunDialog({
       return;
     }
     setFormError(null);
-    const body: CreateLogEntryRunPayload = {
+    const body: CreateSprintPayload = {
       range_start: parsed.data.rangeStart,
       range_end: parsed.data.rangeEnd,
       repos: selectedRepos.map((r) => ({
@@ -125,8 +115,7 @@ export function AddLogEntryRunDialog({
     }
   };
 
-  const submitDisabled =
-    isSubmitting || isPending || !!isError || !isDraftValid;
+  const submitDisabled = isSubmitting || isPending || !!isError || !isDraftValid;
 
   return (
     <Dialog
@@ -138,10 +127,9 @@ export function AddLogEntryRunDialog({
       <DialogContent className="flex max-h-[min(90vh,720px)] w-full min-w-0 max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <div className="min-w-0 shrink-0 p-6 pb-4">
           <DialogHeader>
-            <DialogTitle>Add log entry run</DialogTitle>
+            <DialogTitle>Add sprint</DialogTitle>
             <DialogDescription>
-              Choose up to {MAX_REPOS_PER_LOG_ENTRY_RUN} repositories and the time range for this
-              run.
+              Choose up to {MAX_REPOS_PER_SPRINT} repositories and the time range for this sprint.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -149,7 +137,7 @@ export function AddLogEntryRunDialog({
         <form onSubmit={handleSubmit} className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col">
           <div className="grid min-w-0 grid-cols-1 gap-3 px-6 sm:grid-cols-2">
             <DatePickerField
-              id="log-run-range-start"
+              id="sprint-range-start"
               label="Start date"
               value={rangeStart}
               maxDate={rangeEnd || undefined}
@@ -159,7 +147,7 @@ export function AddLogEntryRunDialog({
               }}
             />
             <DatePickerField
-              id="log-run-range-end"
+              id="sprint-range-end"
               label="End date"
               value={rangeEnd}
               minDate={rangeStart || undefined}
@@ -171,7 +159,7 @@ export function AddLogEntryRunDialog({
           </div>
 
           <p className="mt-3 min-w-0 px-6 text-xs text-muted-foreground">
-            Selected {selectedRepoIds.length} / {MAX_REPOS_PER_LOG_ENTRY_RUN} repositories
+            Selected {selectedRepoIds.length} / {MAX_REPOS_PER_SPRINT} repositories
           </p>
 
           <Separator className="mt-3 shrink-0" />
@@ -179,73 +167,71 @@ export function AddLogEntryRunDialog({
           <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-6">
             <ScrollArea className="h-52 w-full min-w-0 max-w-full sm:h-60">
               <div className="min-w-0 max-w-full py-3 pr-3">
-              {isPending && (
-                <p className="py-4 text-center text-sm text-muted-foreground">Loading repos…</p>
-              )}
+                {isPending && (
+                  <p className="py-4 text-center text-sm text-muted-foreground">Loading repos...</p>
+                )}
 
-              {isError && (
-                <p className="py-4 text-center text-sm text-destructive">
-                  {error instanceof Error ? error.message : "Failed to load repos."}
-                </p>
-              )}
+                {isError && (
+                  <p className="py-4 text-center text-sm text-destructive">
+                    {error instanceof Error ? error.message : "Failed to load repos."}
+                  </p>
+                )}
 
-              {repos && repos.length === 0 && (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  No repositories found.
-                </p>
-              )}
+                {repos && repos.length === 0 && (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    No repositories found.
+                  </p>
+                )}
 
-              {repos && repos.length > 0 && (
-                <ul className="min-w-0 divide-y divide-border">
-                  {repos.map((repo) => {
-                    const selected = selectedRepoIds.includes(repo.id);
-                    return (
-                      <li key={repo.id}>
-                        <button
-                          type="button"
-                          onClick={() => toggleRepo(repo.id)}
-                          aria-pressed={selected}
-                          className={`flex w-full min-w-0 max-w-full items-start justify-between gap-3 overflow-hidden rounded-md px-1 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none ${
-                            selected
-                              ? "bg-accent/80 ring-1 ring-border"
-                              : "hover:bg-muted/60"
-                          }`}
-                        >
-                          <div className="flex min-w-0 max-w-full flex-1 items-start gap-2 overflow-hidden">
-                            <span
-                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                selected
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-input bg-background"
-                              }`}
-                              aria-hidden
-                            >
-                              {selected ? (
-                                <Check className="h-3 w-3" strokeWidth={1.75} aria-hidden />
-                              ) : null}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-foreground">
-                                {repo.full_name}
-                              </p>
-                              {repo.description ? (
-                                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                  {repo.description}
+                {repos && repos.length > 0 && (
+                  <ul className="min-w-0 divide-y divide-border">
+                    {repos.map((repo) => {
+                      const selected = selectedRepoIds.includes(repo.id);
+                      return (
+                        <li key={repo.id}>
+                          <button
+                            type="button"
+                            onClick={() => toggleRepo(repo.id)}
+                            aria-pressed={selected}
+                            className={`flex w-full min-w-0 max-w-full items-start justify-between gap-3 overflow-hidden rounded-md px-1 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none ${
+                              selected ? "bg-accent/80 ring-1 ring-border" : "hover:bg-muted/60"
+                            }`}
+                          >
+                            <div className="flex min-w-0 max-w-full flex-1 items-start gap-2 overflow-hidden">
+                              <span
+                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                  selected
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-input bg-background"
+                                }`}
+                                aria-hidden
+                              >
+                                {selected ? (
+                                  <Check className="h-3 w-3" strokeWidth={1.75} aria-hidden />
+                                ) : null}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-foreground">
+                                  {repo.full_name}
                                 </p>
-                              ) : null}
+                                {repo.description ? (
+                                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                    {repo.description}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                          {repo.private ? (
-                            <Badge variant="secondary" className="shrink-0 text-[0.65rem]">
-                              private
-                            </Badge>
-                          ) : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+                            {repo.private ? (
+                              <Badge variant="secondary" className="shrink-0 text-[0.65rem]">
+                                private
+                              </Badge>
+                            ) : null}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             </ScrollArea>
           </div>
@@ -258,7 +244,7 @@ export function AddLogEntryRunDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={submitDisabled}>
-                {isSubmitting ? "Creating…" : "Create"}
+                {isSubmitting ? "Creating..." : "Create"}
               </Button>
             </div>
           </div>
