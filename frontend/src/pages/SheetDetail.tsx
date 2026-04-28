@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createSprint, fetchSheet } from "../api/sheets";
+import { createSprint, fetchSheet, updateSprintSummary } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
+import { SprintCard } from "../components/sheet/SprintCard";
 import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CreateSprintPayload, Sprint } from "../types/sheet";
@@ -27,6 +26,13 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
       setAddSprintOpen(false);
+    },
+  });
+  const updateSummaryRun = useMutation({
+    mutationFn: ({ sprintId, summary }: { sprintId: number; summary: string }) =>
+      updateSprintSummary(sheetId, sprintId, { summary }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
     },
   });
 
@@ -136,68 +142,14 @@ export default function SheetDetail({ sheetId, onBack }: Props) {
         {sheet.sprints.length ? (
           <div className="space-y-4">
             {sheet.sprints.map((sprint) => (
-              <Card key={sprint.id} size="sm" className="shadow-sm">
-                <CardContent className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium text-foreground">
-                      {sprint.range_start} → {sprint.range_end}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDetailSprint(sprint)}
-                      >
-                        Details
-                      </Button>
-                      <Badge
-                        variant="outline"
-                        className={
-                          sprint.status === "saved"
-                            ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
-                            : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-                        }
-                      >
-                        {sprint.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  {sprint.summary.trim() ? (
-                    <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-                      {sprint.summary}
-                    </p>
-                  ) : null}
-                  <p className="text-sm text-foreground">Hours: {sprint.time_hours ?? "—"}</p>
-                  {sprint.sprint_repos.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-sm">
-                        <thead>
-                          <tr className="border-b border-border text-xs text-muted-foreground">
-                            <th className="pb-2 pr-4 font-medium">Project</th>
-                            <th className="pb-2 font-medium">Commit preview</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sprint.sprint_repos.map((entry) => {
-                            const commitPreview = entry.commit_messages.split("\n")[0]?.trim() || "";
-                            return (
-                              <tr key={entry.id} className="border-b border-border/60 last:border-0">
-                                <td className="py-2 pr-4 text-foreground">{entry.project}</td>
-                                <td className="max-w-md py-2 text-muted-foreground">
-                                  <span className="line-clamp-3 whitespace-pre-wrap wrap-break-word">
-                                    {commitPreview || "—"}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                </CardContent>
-              </Card>
+              <SprintCard
+                key={sprint.id}
+                sprint={sprint}
+                onDetails={(item) => setDetailSprint(item)}
+                onSaveSummary={(sprintId, summary) =>
+                  updateSummaryRun.mutateAsync({ sprintId, summary })
+                }
+              />
             ))}
           </div>
         ) : (

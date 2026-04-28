@@ -63,3 +63,7 @@ export interface CreateSprintPayload {
   range_end: string;
   repos: CreateSprintRepoRef[];
 }
+
+export interface UpdateSprintSummaryPayload {
+  summary: string;
+}

@@ -118,3 +118,10 @@ class SprintCreateSerializer(serializers.Serializer):
                 }
             )
         return attrs
+
+
+class SprintSummaryUpdateSerializer(serializers.Serializer):
+    summary = serializers.CharField(allow_blank=True)
+
+    def validate_summary(self, value: str) -> str:
+        return value.strip()

@@ -9,6 +9,11 @@ urlpatterns = [
         views.api_sprint_create,
         name="api_sprint_create",
     ),
+    path(
+        "sheets/<int:sheet_id>/sprints/<int:sprint_id>/summary/",
+        views.api_sprint_summary_update,
+        name="api_sprint_summary_update",
+    ),
     path("sheets/<int:sheet_id>/", views.api_sheet_detail, name="api_sheet_detail"),
     path("github/token-status/", views.api_github_token_status, name="api_github_token_status"),
     path("github/repos/", views.api_github_repos, name="api_github_repos"),

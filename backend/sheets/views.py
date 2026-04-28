@@ -19,6 +19,7 @@ from .serializers import (
     SheetDetailSerializer,
     SheetListSerializer,
     SprintCreateSerializer,
+    SprintSummaryUpdateSerializer,
     SprintSerializer,
 )
 
@@ -127,6 +128,16 @@ def api_sprint_create(request: Request, sheet_id: int) -> Response:
 
     sprint = Sprint.objects.prefetch_related("sprint_repos__sheet_repo").get(pk=sprint.pk)
     return Response(SprintSerializer(sprint).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PATCH"])
+def api_sprint_summary_update(request: Request, sheet_id: int, sprint_id: int) -> Response:
+    sprint = get_object_or_404(Sprint, pk=sprint_id, sheet_id=sheet_id)
+    update = SprintSummaryUpdateSerializer(data=request.data)
+    update.is_valid(raise_exception=True)
+    sprint.summary = update.validated_data["summary"]
+    sprint.save(update_fields=["summary"])
+    return Response(SprintSerializer(sprint).data)
 
 
 @api_view(["GET"])
