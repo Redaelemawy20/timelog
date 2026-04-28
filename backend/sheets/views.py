@@ -19,7 +19,7 @@ from .serializers import (
     SheetDetailSerializer,
     SheetListSerializer,
     SprintCreateSerializer,
-    SprintSummaryUpdateSerializer,
+    SprintUpdateSerializer,
     SprintSerializer,
 )
 
@@ -131,12 +131,18 @@ def api_sprint_create(request: Request, sheet_id: int) -> Response:
 
 
 @api_view(["PATCH"])
-def api_sprint_summary_update(request: Request, sheet_id: int, sprint_id: int) -> Response:
+def api_sprint_update(request: Request, sheet_id: int, sprint_id: int) -> Response:
     sprint = get_object_or_404(Sprint, pk=sprint_id, sheet_id=sheet_id)
-    update = SprintSummaryUpdateSerializer(data=request.data)
+    update = SprintUpdateSerializer(data=request.data)
     update.is_valid(raise_exception=True)
-    sprint.summary = update.validated_data["summary"]
-    sprint.save(update_fields=["summary"])
+    changed_fields: list[str] = []
+    if "summary" in update.validated_data:
+        sprint.summary = update.validated_data["summary"]
+        changed_fields.append("summary")
+    if "time_hours" in update.validated_data:
+        sprint.time_hours = update.validated_data["time_hours"]
+        changed_fields.append("time_hours")
+    sprint.save(update_fields=changed_fields)
     return Response(SprintSerializer(sprint).data)
 
 

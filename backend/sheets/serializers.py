@@ -120,8 +120,20 @@ class SprintCreateSerializer(serializers.Serializer):
         return attrs
 
 
-class SprintSummaryUpdateSerializer(serializers.Serializer):
-    summary = serializers.CharField(allow_blank=True)
+class SprintUpdateSerializer(serializers.Serializer):
+    summary = serializers.CharField(required=False, allow_blank=True)
+    time_hours = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        min_value=0,
+    )
 
     def validate_summary(self, value: str) -> str:
         return value.strip()
+
+    def validate(self, attrs: dict) -> dict:
+        if "summary" not in attrs and "time_hours" not in attrs:
+            raise serializers.ValidationError("Provide at least one field to update.")
+        return attrs

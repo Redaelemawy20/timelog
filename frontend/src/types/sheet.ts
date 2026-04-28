@@ -64,6 +64,7 @@ export interface CreateSprintPayload {
   repos: CreateSprintRepoRef[];
 }
 
-export interface UpdateSprintSummaryPayload {
-  summary: string;
+export interface UpdateSprintPayload {
+  summary?: string;
+  time_hours?: string | null;
 }

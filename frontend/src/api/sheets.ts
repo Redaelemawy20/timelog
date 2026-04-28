@@ -3,7 +3,7 @@ import type {
   CreateSprintPayload,
   Sheet,
   SheetDetail,
-  UpdateSprintSummaryPayload,
+  UpdateSprintPayload,
 } from "../types/sheet";
 
 export async function fetchSheets(signal?: AbortSignal): Promise<Sheet[]> {
@@ -70,24 +70,26 @@ export async function createSheet(name: string): Promise<Sheet> {
   return res.json() as Promise<Sheet>;
 }
 
-export async function updateSprintSummary(
+export async function updateSprint(
   sheetId: number,
   sprintId: number,
-  body: UpdateSprintSummaryPayload,
+  body: UpdateSprintPayload,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/summary/`, {
+  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    let message = `Failed to update sprint summary (${res.status})`;
+    let message = `Failed to update sprint (${res.status})`;
     try {
       const parsed = (await res.json()) as Record<string, unknown>;
       if (typeof parsed.detail === "string") {
         message = parsed.detail;
       } else if (Array.isArray(parsed.summary) && parsed.summary.length > 0) {
         message = String(parsed.summary[0]);
+      } else if (Array.isArray(parsed.time_hours) && parsed.time_hours.length > 0) {
+        message = String(parsed.time_hours[0]);
       }
     } catch {
       /* keep default */

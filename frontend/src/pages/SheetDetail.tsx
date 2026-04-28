@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSprint, fetchSheet, updateSprintSummary } from "../api/sheets";
+import { createSprint, fetchSheet, updateSprint } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SprintCard } from "../components/sheet/SprintCard";
 import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
@@ -48,9 +48,14 @@ export default function SheetDetail() {
       setAddSprintOpen(false);
     },
   });
-  const updateSummaryRun = useMutation({
-    mutationFn: ({ sprintId, summary }: { sprintId: number; summary: string }) =>
-      updateSprintSummary(sheetId, sprintId, { summary }),
+  const updateSprintRun = useMutation({
+    mutationFn: ({
+      sprintId,
+      patch,
+    }: {
+      sprintId: number;
+      patch: { summary?: string; time_hours?: string | null };
+    }) => updateSprint(sheetId, sprintId, patch),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
     },
@@ -178,8 +183,8 @@ export default function SheetDetail() {
                 key={sprint.id}
                 sprint={sprint}
                 onDetails={(item) => setDetailSprint(item)}
-                onSaveSummary={(sprintId, summary) =>
-                  updateSummaryRun.mutateAsync({ sprintId, summary })
+                onUpdateSprint={(sprintId, patch) =>
+                  updateSprintRun.mutateAsync({ sprintId, patch })
                 }
               />
             ))}

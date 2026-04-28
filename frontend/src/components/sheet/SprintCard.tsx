@@ -1,62 +1,125 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Check, Pencil, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  formatDayMonth,
+  formatTimeHours,
+  toHoursAndMinutes,
+  toTimeHoursValue,
+} from "../../lib/sprintCardFormat";
 import type { Sprint } from "../../types/sheet";
 
 interface Props {
   sprint: Sprint;
   onDetails: (sprint: Sprint) => void;
-  onSaveSummary: (sprintId: number, summary: string) => Promise<void>;
+  onUpdateSprint: (
+    sprintId: number,
+    patch: {
+      summary?: string;
+      time_hours?: string | null;
+    },
+  ) => Promise<void>;
 }
 
-function formatDayMonth(value: string): string {
-  const [year, month, day] = value.split("-").map((part) => Number(part));
-  if (!year || !month || !day) return value;
-  return `${day}/${month}`;
-}
-
-export function SprintCard({ sprint, onDetails, onSaveSummary }: Props) {
+export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
   const [summaryValue, setSummaryValue] = useState(sprint.summary);
   const [summaryDraft, setSummaryDraft] = useState(sprint.summary);
+  const [timeHoursValue, setTimeHoursValue] = useState<string | null>(sprint.time_hours);
+  const [hourDraft, setHourDraft] = useState("");
+  const [minuteDraft, setMinuteDraft] = useState("");
+  const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
-  const [isSavingSummary, setIsSavingSummary] = useState(false);
-  const [saveSummaryError, setSaveSummaryError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [timeError, setTimeError] = useState<string | null>(null);
 
   useEffect(() => {
     setSummaryValue(sprint.summary);
     setSummaryDraft(sprint.summary);
+    setTimeHoursValue(sprint.time_hours);
+    const current = toHoursAndMinutes(sprint.time_hours);
+    setHourDraft(current.hours ? String(current.hours) : "");
+    setMinuteDraft(current.minutes ? String(current.minutes) : "");
+    setIsTimeDialogOpen(false);
     setIsEditingSummary(false);
-    setIsSavingSummary(false);
-    setSaveSummaryError(null);
-  }, [sprint.id, sprint.summary]);
+    setIsSaving(false);
+    setSummaryError(null);
+    setTimeError(null);
+  }, [sprint.id, sprint.summary, sprint.time_hours]);
 
   const startSummaryEdit = () => {
     setSummaryDraft(summaryValue);
-    setSaveSummaryError(null);
+    setSummaryError(null);
     setIsEditingSummary(true);
   };
 
   const saveSummaryEdit = async () => {
     const nextSummary = summaryDraft.trim();
-    setIsSavingSummary(true);
-    setSaveSummaryError(null);
+    setIsSaving(true);
+    setSummaryError(null);
     try {
-      await onSaveSummary(sprint.id, nextSummary);
+      await onUpdateSprint(sprint.id, { summary: nextSummary });
       setSummaryValue(nextSummary);
       setIsEditingSummary(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save summary";
-      setSaveSummaryError(message);
+      setSummaryError(message);
     } finally {
-      setIsSavingSummary(false);
+      setIsSaving(false);
     }
   };
 
   const cancelSummaryEdit = () => {
     setSummaryDraft(summaryValue);
     setIsEditingSummary(false);
+  };
+
+  const openTimeDialog = () => {
+    const current = toHoursAndMinutes(timeHoursValue);
+    setHourDraft(current.hours ? String(current.hours) : "");
+    setMinuteDraft(current.minutes ? String(current.minutes) : "");
+    setTimeError(null);
+    setIsTimeDialogOpen(true);
+  };
+
+  const saveTimeEdit = async () => {
+    const normalizedHours = hourDraft.trim() === "" ? "0" : hourDraft.trim();
+    const normalizedMinutes = minuteDraft.trim() === "" ? "0" : minuteDraft.trim();
+    const nextHours = Number.parseInt(normalizedHours, 10);
+    const nextMinutes = Number.parseInt(normalizedMinutes, 10);
+    if (!Number.isFinite(nextHours) || nextHours < 0) {
+      setTimeError("Hours must be 0 or greater.");
+      return;
+    }
+    if (!Number.isFinite(nextMinutes) || nextMinutes < 0 || nextMinutes > 59) {
+      setTimeError("Minutes must be between 0 and 59.");
+      return;
+    }
+
+    setIsSaving(true);
+    setTimeError(null);
+    try {
+      const nextTimeHours = toTimeHoursValue(nextHours, nextMinutes);
+      await onUpdateSprint(sprint.id, { time_hours: nextTimeHours });
+      setTimeHoursValue(nextTimeHours);
+      setIsTimeDialogOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save time";
+      setTimeError(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -110,9 +173,9 @@ export function SprintCard({ sprint, onDetails, onSaveSummary }: Props) {
               <tr className="align-top">
                 <td className="border border-border px-2 py-2 text-foreground whitespace-nowrap">{formatDayMonth(sprint.range_start)}</td>
                 <td className="border border-border px-2 py-2 text-foreground whitespace-nowrap">{formatDayMonth(sprint.range_end)}</td>
-                <td className="border  p-0">
-                  <div className="min-w-0 overflow-hidden border border-border bg-muted/20 p-1 focus-within:ring-2 focus-within:ring-ring">
-            <div className="mb-1 flex justify-end gap-1">
+                <td className="border p-0 align-top">
+                  <div className="flex h-full min-h-20 min-w-0 flex-col overflow-hidden border border-border bg-muted/20 p-1 focus-within:ring-2 focus-within:ring-ring">
+                    <div className="mb-1 flex justify-end gap-1">
                       {isEditingSummary ? (
                         <>
                           <Button
@@ -120,8 +183,8 @@ export function SprintCard({ sprint, onDetails, onSaveSummary }: Props) {
                             variant="ghost"
                             size="icon-sm"
                             className="size-6"
-                    onClick={() => void saveSummaryEdit()}
-                    disabled={isSavingSummary}
+                            onClick={() => void saveSummaryEdit()}
+                            disabled={isSaving}
                             aria-label="Save summary"
                           >
                             <Check className="size-3.5" aria-hidden />
@@ -132,7 +195,7 @@ export function SprintCard({ sprint, onDetails, onSaveSummary }: Props) {
                             size="icon-sm"
                             className="size-6"
                             onClick={cancelSummaryEdit}
-                    disabled={isSavingSummary}
+                            disabled={isSaving}
                             aria-label="Cancel summary edit"
                           >
                             <X className="size-3.5" aria-hidden />
@@ -145,7 +208,7 @@ export function SprintCard({ sprint, onDetails, onSaveSummary }: Props) {
                           size="icon-sm"
                           className="size-6"
                           onClick={startSummaryEdit}
-                  disabled={isSavingSummary}
+                          disabled={isSaving}
                           aria-label="Edit summary"
                         >
                           <Pencil className="size-3.5" aria-hidden />
@@ -156,20 +219,83 @@ export function SprintCard({ sprint, onDetails, onSaveSummary }: Props) {
                       value={isEditingSummary ? summaryDraft : summaryValue}
                       onChange={(e) => setSummaryDraft(e.target.value)}
                       readOnly={!isEditingSummary}
-              disabled={isSavingSummary}
-                      className="min-h-20 w-full resize-y bg-transparent px-2 py-1 text-center text-sm text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 read-only:cursor-default read-only:text-muted-foreground"
+                      disabled={isSaving}
+                      className="h-full min-h-0 w-full flex-1 resize-none bg-transparent px-2 py-1 text-center text-sm text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 read-only:cursor-default read-only:text-muted-foreground"
                       placeholder="Add sprint summary"
                     />
-            {saveSummaryError ? (
-              <p className="px-2 pb-1 text-xs text-destructive">{saveSummaryError}</p>
-            ) : null}
+                    {summaryError ? (
+                      <p className="px-2 pb-1 text-xs text-destructive">{summaryError}</p>
+                    ) : null}
                   </div>
                 </td>
-                <td className="border border-border px-2 py-2 text-right text-foreground whitespace-nowrap">{sprint.time_hours ?? 0}</td>
+                <td className="border p-0 align-top">
+                  <div className="flex h-full min-h-20 min-w-0 flex-col overflow-hidden bg-muted/20 p-1">
+                    <div className="mb-1 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-6"
+                        onClick={openTimeDialog}
+                        disabled={isSaving}
+                        aria-label="Edit time"
+                      >
+                        <Pencil className="size-3.5" aria-hidden />
+                      </Button>
+                    </div>
+                    <div className="flex flex-1 items-center justify-center px-1">
+                      <p className="text-center text-sm text-foreground whitespace-nowrap">
+                        {formatTimeHours(timeHoursValue)}
+                      </p>
+                    </div>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Edit time</DialogTitle>
+              <DialogDescription>Enter hours and minutes for this sprint.</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Hours</p>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={hourDraft}
+                  onChange={(e) => setHourDraft(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Minutes</p>
+                <Input
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={1}
+                  value={minuteDraft}
+                  onChange={(e) => setMinuteDraft(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+            {timeError ? <p className="text-xs text-destructive">{timeError}</p> : null}
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => void saveTimeEdit()} disabled={isSaving}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
