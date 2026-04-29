@@ -13,6 +13,11 @@ from .github_token import (
     resolve_token_path,
     verify_github_token,
 )
+from .llm_summary import (
+    SummaryGenerationConfigError,
+    SummaryGenerationUpstreamError,
+    generate_sprint_summary_text,
+)
 from .models import Sheet, SheetRepo, Sprint, SprintRepo
 from .serializers import (
     SheetCreateSerializer,
@@ -144,6 +149,27 @@ def api_sprint_update(request: Request, sheet_id: int, sprint_id: int) -> Respon
         changed_fields.append("time_hours")
     sprint.save(update_fields=changed_fields)
     return Response(SprintSerializer(sprint).data)
+
+
+@api_view(["POST"])
+def api_sprint_generate_summary(request: Request, sprint_id: int) -> Response:
+    sprint = get_object_or_404(
+        Sprint.objects.prefetch_related("sprint_repos__sheet_repo"),
+        pk=sprint_id,
+    )
+    try:
+        summary = generate_sprint_summary_text(sprint)
+    except SummaryGenerationConfigError as exc:
+        return Response(
+            {"detail": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    except SummaryGenerationUpstreamError as exc:
+        return Response(
+            {"detail": str(exc)},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+    return Response({"summary": summary})
 
 
 @api_view(["GET"])

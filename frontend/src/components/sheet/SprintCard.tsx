@@ -10,8 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Check, Pencil, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Loader2, Pencil, Sparkles, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { generateSprintSummary } from "../../api/sheets";
 import {
   formatDayMonth,
   formatTimeHours,
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
+  const summaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [summaryValue, setSummaryValue] = useState(sprint.summary);
   const [summaryDraft, setSummaryDraft] = useState(sprint.summary);
   const [timeHoursValue, setTimeHoursValue] = useState<string | null>(sprint.time_hours);
@@ -41,6 +43,7 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
 
@@ -54,9 +57,17 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
     setIsTimeDialogOpen(false);
     setIsEditingSummary(false);
     setIsSaving(false);
+    setIsGeneratingSummary(false);
     setSummaryError(null);
     setTimeError(null);
   }, [sprint.id, sprint.summary, sprint.time_hours]);
+
+  useEffect(() => {
+    const textarea = summaryTextareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [isEditingSummary, summaryDraft, summaryValue]);
 
   const startSummaryEdit = () => {
     setSummaryDraft(summaryValue);
@@ -83,6 +94,20 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
   const cancelSummaryEdit = () => {
     setSummaryDraft(summaryValue);
     setIsEditingSummary(false);
+  };
+
+  const generateSummaryDraft = async () => {
+    setSummaryError(null);
+    setIsGeneratingSummary(true);
+    try {
+      const generated = await generateSprintSummary(sprint.id);
+      setSummaryDraft(generated);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to generate summary";
+      setSummaryError(message);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
   };
 
   const openTimeDialog = () => {
@@ -174,8 +199,8 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
                 <td className="border border-border px-2 py-2 text-foreground whitespace-nowrap">{formatDayMonth(sprint.range_start)}</td>
                 <td className="border border-border px-2 py-2 text-foreground whitespace-nowrap">{formatDayMonth(sprint.range_end)}</td>
                 <td className="border p-0 align-top">
-                  <div className="flex h-full min-h-20 min-w-0 flex-col overflow-hidden border border-border bg-muted/20 p-1 focus-within:ring-2 focus-within:ring-ring">
-                    <div className="mb-1 flex justify-end gap-1">
+                  <div className="flex min-h-20 min-w-0 flex-col border border-border bg-muted/20 p-1 focus-within:ring-2 focus-within:ring-ring">
+                    <div className="mb-1 flex items-center justify-end gap-1">
                       {isEditingSummary ? (
                         <>
                           <Button
@@ -184,7 +209,7 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
                             size="icon-sm"
                             className="size-6"
                             onClick={() => void saveSummaryEdit()}
-                            disabled={isSaving}
+                            disabled={isSaving || isGeneratingSummary}
                             aria-label="Save summary"
                           >
                             <Check className="size-3.5" aria-hidden />
@@ -195,7 +220,7 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
                             size="icon-sm"
                             className="size-6"
                             onClick={cancelSummaryEdit}
-                            disabled={isSaving}
+                            disabled={isSaving || isGeneratingSummary}
                             aria-label="Cancel summary edit"
                           >
                             <X className="size-3.5" aria-hidden />
@@ -208,7 +233,7 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
                           size="icon-sm"
                           className="size-6"
                           onClick={startSummaryEdit}
-                          disabled={isSaving}
+                          disabled={isSaving || isGeneratingSummary}
                           aria-label="Edit summary"
                         >
                           <Pencil className="size-3.5" aria-hidden />
@@ -216,15 +241,37 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
                       )}
                     </div>
                     <textarea
+                      ref={summaryTextareaRef}
                       value={isEditingSummary ? summaryDraft : summaryValue}
                       onChange={(e) => setSummaryDraft(e.target.value)}
                       readOnly={!isEditingSummary}
-                      disabled={isSaving}
-                      className="h-full min-h-0 w-full flex-1 resize-none bg-transparent px-2 py-1 text-center text-sm text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 read-only:cursor-default read-only:text-muted-foreground"
+                      disabled={isSaving || isGeneratingSummary}
+                      rows={3}
+                      className="w-full resize-none overflow-hidden bg-transparent px-2 py-1 text-center text-sm text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 read-only:cursor-default read-only:text-muted-foreground"
                       placeholder="Add sprint summary"
                     />
                     {summaryError ? (
                       <p className="px-2 pb-1 text-xs text-destructive">{summaryError}</p>
+                    ) : null}
+                    {isEditingSummary ? (
+                      <div className="mt-1 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="size-6"
+                          onClick={() => void generateSummaryDraft()}
+                          disabled={isSaving || isGeneratingSummary}
+                          aria-label="Generate summary"
+                          title="Generate summary"
+                        >
+                          {isGeneratingSummary ? (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Sparkles className="size-3.5" aria-hidden />
+                          )}
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
                 </td>

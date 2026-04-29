@@ -97,3 +97,26 @@ export async function updateSprint(
     throw new Error(message);
   }
 }
+
+export async function generateSprintSummary(sprintId: number): Promise<string> {
+  const res = await fetch(`${API_BASE}/sprints/${sprintId}/summary/`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    let message = `Failed to generate summary (${res.status})`;
+    try {
+      const parsed = (await res.json()) as Record<string, unknown>;
+      if (typeof parsed.detail === "string") {
+        message = parsed.detail;
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+  const body = (await res.json()) as { summary?: unknown };
+  if (typeof body.summary !== "string") {
+    throw new Error("Invalid summary response.");
+  }
+  return body.summary;
+}
