@@ -20,6 +20,11 @@ urlpatterns = [
         name="api_sprint_generate_summary",
     ),
     path("sheets/<int:sheet_id>/", views.api_sheet_detail, name="api_sheet_detail"),
+    path(
+        "sheets/<int:sheet_id>/export/",
+        views.api_sheet_export_excel,
+        name="api_sheet_export_excel",
+    ),
     path("github/token-status/", views.api_github_token_status, name="api_github_token_status"),
     path("github/repos/", views.api_github_repos, name="api_github_repos"),
 ]

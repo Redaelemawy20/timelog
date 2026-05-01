@@ -120,3 +120,51 @@ export async function generateSprintSummary(sprintId: number): Promise<string> {
   }
   return body.summary;
 }
+
+export async function exportSheetExcel(sheetId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/sheets/${sheetId}/export/`);
+  if (!res.ok) {
+    throw new Error(`Failed to export sheet (${res.status})`);
+  }
+
+  const blob = await res.blob();
+
+  const contentDisposition = res.headers.get("Content-Disposition");
+  let filename = "sprints.xlsx";
+  if (contentDisposition) {
+    const match = /filename="?([^"]+)"?/.exec(contentDisposition);
+    if (match?.[1]) {
+      filename = match[1];
+    }
+  }
+
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [
+          {
+            description: "Excel Spreadsheet",
+            accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        throw err;
+      }
+    }
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}

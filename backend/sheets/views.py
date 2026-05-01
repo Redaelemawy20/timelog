@@ -1,6 +1,12 @@
+from datetime import datetime
+from io import BytesIO
+
 from django.conf import settings
 from django.db import transaction
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -223,3 +229,111 @@ def api_github_repos(request: Request) -> Response:
 
     assert listed.repos is not None
     return Response({"repos": listed.repos})
+
+
+@api_view(["GET"])
+def api_sheet_export_excel(request: Request, sheet_id: int) -> FileResponse:
+    sheet = get_object_or_404(Sheet, pk=sheet_id)
+    sprints = sheet.sprints.all().prefetch_related("sprint_repos__sheet_repo").order_by("range_start")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sprints"
+
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    separator_fill = PatternFill(start_color="D4F4DD", end_color="D4F4DD", fill_type="solid")
+    wrap_alignment = Alignment(wrap_text=True, vertical="top")
+
+    ws.append(["Start Date", "End Date", "Summary", "Time (hr)", "Projects"])
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(vertical="center")
+
+    current_row = 2
+    for idx, sprint in enumerate(sprints):
+        projects = [
+            repo.project
+            for repo in sprint.sprint_repos.all()
+            if repo.commit_messages and repo.commit_messages.strip()
+        ]
+
+        ws.append([
+            sprint.range_start.strftime("%d %b"),
+            sprint.range_end.strftime("%d %b"),
+            sprint.summary,
+            float(sprint.time_hours) if sprint.time_hours else 0,
+            ", ".join(projects),
+        ])
+
+        for cell in ws[current_row]:
+            cell.alignment = wrap_alignment
+
+        if idx < len(sprints) - 1:
+            current_row += 1
+            ws.append(["", "", "", "", ""])
+            for cell in ws[current_row]:
+                cell.fill = separator_fill
+            ws.row_dimensions[current_row].height = 8
+
+        current_row += 1
+
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 12
+    ws.column_dimensions["C"].width = 150
+    ws.column_dimensions["D"].width = 10
+    ws.column_dimensions["E"].width = 25
+
+    for row in ws.iter_rows(min_row=2, max_row=current_row):
+        if row[0].value:
+            ws.row_dimensions[row[0].row].height = None
+
+    summary_fill = PatternFill(start_color="FFE699", end_color="FFE699", fill_type="solid")
+    summary_font = Font(bold=True)
+    
+    first_data_row = 2
+    last_data_row = current_row
+    sum_formula = f"=SUM(D{first_data_row}:D{last_data_row})"
+    
+    current_row += 1
+    ws.append(["", "", "", sum_formula, ""])
+    ws[f"D{current_row}"].fill = summary_fill
+    ws[f"D{current_row}"].font = summary_font
+    ws[f"C{current_row}"] = "Sum"
+    ws[f"C{current_row}"].alignment = Alignment(horizontal="right")
+    ws[f"C{current_row}"].font = summary_font
+    
+    current_row += 1
+    ws.append(["", "", "", 0, ""])
+    ws[f"D{current_row}"].fill = summary_fill
+    ws[f"D{current_row}"].font = summary_font
+    ws[f"C{current_row}"] = "Previous"
+    ws[f"C{current_row}"].alignment = Alignment(horizontal="right")
+    ws[f"C{current_row}"].font = summary_font
+    
+    current_row += 1
+    sum_row = current_row - 2
+    previous_row = current_row - 1
+    total_formula = f"=D{sum_row}+D{previous_row}"
+    ws.append(["", "", "", total_formula, ""])
+    ws[f"D{current_row}"].fill = summary_fill
+    ws[f"D{current_row}"].font = summary_font
+    ws[f"C{current_row}"] = "Total"
+    ws[f"C{current_row}"].alignment = Alignment(horizontal="right")
+    ws[f"C{current_row}"].font = summary_font
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    sheet_name_safe = sheet.name.replace(" ", "_").replace("/", "_").replace("\\", "_")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{sheet_name_safe}_sprints_{timestamp}.xlsx"
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=filename,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )

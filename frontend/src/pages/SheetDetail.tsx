@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSprint, fetchSheet, updateSprint } from "../api/sheets";
+import { createSprint, exportSheetExcel, fetchSheet, updateSprint } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SprintCard } from "../components/sheet/SprintCard";
 import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
@@ -20,6 +20,8 @@ export default function SheetDetail() {
   const queryClient = useQueryClient();
   const [addSprintOpen, setAddSprintOpen] = useState(false);
   const [detailSprint, setDetailSprint] = useState<Sprint | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   if (sheetId === null) {
     return (
@@ -64,6 +66,20 @@ export default function SheetDetail() {
   useEffect(() => {
     if (addSprintOpen) createRun.reset();
   }, [addSprintOpen]);
+
+  const handleExport = async () => {
+    if (!sheetId) return;
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      await exportSheetExcel(sheetId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Export failed";
+      setExportError(message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { data: sheet, isPending, isError, error, refetch, isFetching } = useQuery({
     queryKey: sheetKeys.detail(sheetId),
@@ -172,10 +188,36 @@ export default function SheetDetail() {
           <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Sprints
           </h3>
-          <Button type="button" size="sm" onClick={() => setAddSprintOpen(true)}>
-            Add sprint
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleExport()}
+              disabled={isExporting || sheet.sprints.length === 0}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="size-4" aria-hidden />
+                  Export XLS
+                </>
+              )}
+            </Button>
+            <Button type="button" size="sm" onClick={() => setAddSprintOpen(true)}>
+              Add sprint
+            </Button>
+          </div>
         </div>
+        {exportError ? (
+          <Alert variant="destructive" className="mb-3">
+            <AlertDescription>{exportError}</AlertDescription>
+          </Alert>
+        ) : null}
         {sheet.sprints.length ? (
           <div className="space-y-4">
             {sheet.sprints.map((sprint) => (
