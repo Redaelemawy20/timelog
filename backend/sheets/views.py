@@ -244,12 +244,13 @@ def api_sheet_export_excel(request: Request, sheet_id: int) -> FileResponse:
     header_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
     separator_fill = PatternFill(start_color="D4F4DD", end_color="D4F4DD", fill_type="solid")
     wrap_alignment = Alignment(wrap_text=True, vertical="top")
+    center_alignment = Alignment(horizontal="center", vertical="center")
 
     ws.append(["Start Date", "End Date", "Summary", "Time (hr)", "Projects"])
     for cell in ws[1]:
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = Alignment(vertical="center")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
 
     current_row = 2
     for idx, sprint in enumerate(sprints):
@@ -267,8 +268,11 @@ def api_sheet_export_excel(request: Request, sheet_id: int) -> FileResponse:
             ", ".join(projects),
         ])
 
-        for cell in ws[current_row]:
-            cell.alignment = wrap_alignment
+        for col_idx, cell in enumerate(ws[current_row], start=1):
+            if col_idx == 3:
+                cell.alignment = wrap_alignment
+            else:
+                cell.alignment = center_alignment
 
         if idx < len(sprints) - 1:
             current_row += 1
@@ -300,16 +304,18 @@ def api_sheet_export_excel(request: Request, sheet_id: int) -> FileResponse:
     ws.append(["", "", "", sum_formula, ""])
     ws[f"D{current_row}"].fill = summary_fill
     ws[f"D{current_row}"].font = summary_font
+    ws[f"D{current_row}"].alignment = center_alignment
     ws[f"C{current_row}"] = "Sum"
-    ws[f"C{current_row}"].alignment = Alignment(horizontal="right")
+    ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
     ws[f"C{current_row}"].font = summary_font
     
     current_row += 1
     ws.append(["", "", "", 0, ""])
     ws[f"D{current_row}"].fill = summary_fill
     ws[f"D{current_row}"].font = summary_font
+    ws[f"D{current_row}"].alignment = center_alignment
     ws[f"C{current_row}"] = "Previous"
-    ws[f"C{current_row}"].alignment = Alignment(horizontal="right")
+    ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
     ws[f"C{current_row}"].font = summary_font
     
     current_row += 1
@@ -319,8 +325,9 @@ def api_sheet_export_excel(request: Request, sheet_id: int) -> FileResponse:
     ws.append(["", "", "", total_formula, ""])
     ws[f"D{current_row}"].fill = summary_fill
     ws[f"D{current_row}"].font = summary_font
+    ws[f"D{current_row}"].alignment = center_alignment
     ws[f"C{current_row}"] = "Total"
-    ws[f"C{current_row}"].alignment = Alignment(horizontal="right")
+    ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
     ws[f"C{current_row}"].font = summary_font
 
     buffer = BytesIO()
