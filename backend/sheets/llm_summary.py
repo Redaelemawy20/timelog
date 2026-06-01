@@ -14,6 +14,13 @@ class SummaryGenerationUpstreamError(Exception):
 
 
 def _build_prompt(sprint: Sprint) -> str:
+    active_repos = [
+        repo for repo in sprint.sprint_repos.all()
+        if (repo.commit_messages or "").strip()
+    ]
+    
+    multiple_active_projects = len(active_repos) > 1
+    
     parts: list[str] = [
         "Your job is to convert raw commit messages into a natural, client-friendly summary that focuses on concrete outcomes and actual changes.",
         "",
@@ -56,6 +63,36 @@ def _build_prompt(sprint: Sprint) -> str:
         "* Or: For [page name] + action + outcome",
         "* Or: [Page name] + now/can/shows + specific change",
         "",
+    ]
+    
+    if multiple_active_projects:
+        parts.extend([
+            "CRITICAL: Multiple Projects Grouping",
+            "Since this sprint contains multiple active projects, you MUST:",
+            "1. Group all segments by project name",
+            "2. Use this exact format for each project group:",
+            "   [Project Name]",
+            "   * segment 1",
+            "   * segment 2",
+            "   ---------------",
+            "3. Separate each project group with a dashed line (---------------) that works well in Excel",
+            "4. Do NOT mix segments from different projects",
+            "5. Each project's segments should be grouped together under its project name",
+            "6. The dashed line (---------------) must be on its own line after each project's segments",
+            "",
+            "Example Output for Multiple Projects:",
+            "[Frontend]",
+            "* Added login form with email validation",
+            "* Fixed dashboard layout on mobile",
+            "---------------",
+            "[Backend]",
+            "* Added user authentication endpoint",
+            "* Fixed data export timing issue",
+            "---------------",
+            "",
+        ])
+    
+    parts.extend([
         "Examples of Good vs Bad",
         "Bad: 'Enhanced dashboard functionality'",
         "Good: 'Added activity timeline to Dashboard showing last 30 days'",
@@ -86,7 +123,8 @@ def _build_prompt(sprint: Sprint) -> str:
         "",
         "Now summarize these commits with specific page names and concrete outcomes:",
         "",
-    ]
+    ])
+    
     for repo in sprint.sprint_repos.all():
         repo_name = repo.sheet_repo.display_name or f"{repo.sheet_repo.owner}/{repo.sheet_repo.name}"
         commit_messages = (repo.commit_messages or "").strip()
