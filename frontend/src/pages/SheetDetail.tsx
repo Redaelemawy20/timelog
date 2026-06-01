@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSprint, exportSheetExcel, fetchSheet, updateSprint } from "../api/sheets";
+import { createSprint, deleteSprint, exportSheetExcel, fetchSheet, updateSprint } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SprintCard } from "../components/sheet/SprintCard";
 import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
@@ -58,6 +58,13 @@ export default function SheetDetail() {
       sprintId: number;
       patch: { summary?: string; time_hours?: string | null };
     }) => updateSprint(sheetId, sprintId, patch),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
+    },
+  });
+
+  const deleteSprintRun = useMutation({
+    mutationFn: (sprintId: number) => deleteSprint(sheetId, sprintId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
     },
@@ -228,6 +235,7 @@ export default function SheetDetail() {
                 onUpdateSprint={(sprintId, patch) =>
                   updateSprintRun.mutateAsync({ sprintId, patch })
                 }
+                onDeleteSprint={(sprintId) => deleteSprintRun.mutateAsync(sprintId)}
               />
             ))}
           </div>

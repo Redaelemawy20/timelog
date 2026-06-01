@@ -98,6 +98,27 @@ export async function updateSprint(
   }
 }
 
+export async function deleteSprint(
+  sheetId: number,
+  sprintId: number,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    let message = `Failed to delete sprint (${res.status})`;
+    try {
+      const parsed = (await res.json()) as Record<string, unknown>;
+      if (typeof parsed.detail === "string") {
+        message = parsed.detail;
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+}
+
 export async function generateSprintSummary(sprintId: number): Promise<string> {
   const res = await fetch(`${API_BASE}/sprints/${sprintId}/summary/`, {
     method: "POST",

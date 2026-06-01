@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Check, Loader2, Pencil, Sparkles, X } from "lucide-react";
+import { Check, Loader2, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { generateSprintSummary } from "../../api/sheets";
 import {
@@ -31,9 +31,10 @@ interface Props {
       time_hours?: string | null;
     },
   ) => Promise<void>;
+  onDeleteSprint: (sprintId: number) => Promise<void>;
 }
 
-export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
+export function SprintCard({ sprint, onDetails, onUpdateSprint, onDeleteSprint }: Props) {
   const summaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [summaryValue, setSummaryValue] = useState(sprint.summary);
   const [summaryDraft, setSummaryDraft] = useState(sprint.summary);
@@ -46,6 +47,9 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     setSummaryValue(sprint.summary);
@@ -60,6 +64,9 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
     setIsGeneratingSummary(false);
     setSummaryError(null);
     setTimeError(null);
+    setIsDeleteDialogOpen(false);
+    setIsDeleting(false);
+    setDeleteError(null);
   }, [sprint.id, sprint.summary, sprint.time_hours]);
 
   useEffect(() => {
@@ -147,6 +154,20 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDeleteSprint(sprint.id);
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete sprint";
+      setDeleteError(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Card size="sm" className="shadow-sm">
       <CardContent className="space-y-3">
@@ -165,6 +186,16 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => onDetails(sprint)}>
               Details
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive"
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+              Delete
             </Button>
             <Badge
               variant="outline"
@@ -339,6 +370,38 @@ export function SprintCard({ sprint, onDetails, onUpdateSprint }: Props) {
               </Button>
               <Button type="button" onClick={() => void saveTimeEdit()} disabled={isSaving}>
                 Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete sprint</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this sprint ({formatDayMonth(sprint.range_start)} to{" "}
+                {formatDayMonth(sprint.range_end)})? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {deleteError ? <p className="text-xs text-destructive">{deleteError}</p> : null}
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => void handleDelete()}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

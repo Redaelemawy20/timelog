@@ -141,9 +141,14 @@ def api_sprint_create(request: Request, sheet_id: int) -> Response:
     return Response(SprintSerializer(sprint).data, status=status.HTTP_201_CREATED)
 
 
-@api_view(["PATCH"])
+@api_view(["PATCH", "DELETE"])
 def api_sprint_update(request: Request, sheet_id: int, sprint_id: int) -> Response:
     sprint = get_object_or_404(Sprint, pk=sprint_id, sheet_id=sheet_id)
+    
+    if request.method == "DELETE":
+        sprint.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
     update = SprintUpdateSerializer(data=request.data)
     update.is_valid(raise_exception=True)
     changed_fields: list[str] = []
