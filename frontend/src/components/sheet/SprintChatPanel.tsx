@@ -46,6 +46,7 @@ export function SprintChatPanel({ sprint, onClose, onUseSummary }: Props) {
   const messages = conversationQuery.data ?? [];
   const isLoading = conversationQuery.isPending;
   const isSending = sendMessage.isPending;
+  const hasSummary = sprint.summary.trim().length > 0;
 
   useEffect(() => {
     initAttemptedRef.current = false;
@@ -55,11 +56,16 @@ export function SprintChatPanel({ sprint, onClose, onUseSummary }: Props) {
     if (!conversationQuery.isSuccess || initAttemptedRef.current || sendMessage.isPending) {
       return;
     }
-    if (messages.length === 0) {
+    if (messages.length === 0 && !hasSummary) {
       initAttemptedRef.current = true;
       sendMessage.mutate({ init: true });
     }
-  }, [conversationQuery.isSuccess, messages.length, sendMessage.isPending, sendMessage.mutate]);
+  }, [
+    conversationQuery.isSuccess,
+    messages.length,
+    sendMessage.isPending,
+    hasSummary,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
