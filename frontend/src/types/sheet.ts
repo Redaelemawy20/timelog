@@ -68,3 +68,10 @@ export interface UpdateSprintPayload {
   summary?: string;
   time_hours?: string | null;
 }
+
+export interface SprintConversationMessage {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}

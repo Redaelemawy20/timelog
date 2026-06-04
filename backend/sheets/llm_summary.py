@@ -2,7 +2,9 @@ import os
 
 from openai import OpenAI
 
-from .models import Sprint
+from .models import Sprint, SprintConversationMessage
+
+INITIAL_USER_MESSAGE = "Generate a summary from the sprint commits."
 
 
 class SummaryGenerationConfigError(Exception):
@@ -13,14 +15,14 @@ class SummaryGenerationUpstreamError(Exception):
     pass
 
 
-def _build_prompt(sprint: Sprint) -> str:
+def _build_system_prompt(sprint: Sprint) -> str:
     active_repos = [
         repo for repo in sprint.sprint_repos.all()
         if (repo.commit_messages or "").strip()
     ]
-    
+
     multiple_active_projects = len(active_repos) > 1
-    
+
     parts: list[str] = [
         "Your job is to convert raw commit messages into a natural, client-friendly summary that focuses on concrete outcomes and actual changes.",
         "",
@@ -59,12 +61,16 @@ def _build_prompt(sprint: Sprint) -> str:
         "Bug fixes that users notice (e.g., 'Fixed date picker showing wrong month', 'Resolved crash when uploading images')",
         "",
         "Output Format (strict) start each segment with bullet point",
-        "(most of times use this) * Action verb + specific page/feature + what changed " ,
+        "(most of times use this) * Action verb + specific page/feature + what changed ",
         "* Or: For [page name] + action + outcome",
         "* Or: [Page name] + now/can/shows + specific change",
         "",
+        "Conversation behavior",
+        "When the user asks for refinements (shorter, stronger tone, different style, etc.), revise your latest summary accordingly while keeping the same formatting rules.",
+        "Reply with only the revised summary text unless the user asks a clarifying question.",
+        "",
     ]
-    
+
     if multiple_active_projects:
         parts.extend([
             "CRITICAL: Multiple Projects Grouping",
@@ -91,7 +97,7 @@ def _build_prompt(sprint: Sprint) -> str:
             "---------------",
             "",
         ])
-    
+
     parts.extend([
         "Examples of Good vs Bad",
         "Bad: 'Enhanced dashboard functionality'",
@@ -121,10 +127,10 @@ def _build_prompt(sprint: Sprint) -> str:
         "If minimal work, use 1-3 compact but specific segments",
         "Skip internal-only changes unless they affect what users see",
         "",
-        "Now summarize these commits with specific page names and concrete outcomes:",
+        "Sprint commit data:",
         "",
     ])
-    
+
     for repo in sprint.sprint_repos.all():
         repo_name = repo.sheet_repo.display_name or f"{repo.sheet_repo.owner}/{repo.sheet_repo.name}"
         commit_messages = (repo.commit_messages or "").strip()
@@ -144,25 +150,41 @@ def _build_prompt(sprint: Sprint) -> str:
     return "\n".join(parts)
 
 
-def generate_sprint_summary_text(sprint: Sprint) -> str:
+def _build_api_input(
+    system_prompt: str,
+    history: list[SprintConversationMessage],
+) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": system_prompt},
+    ]
+    for message in history:
+        messages.append({"role": message.role, "content": message.content})
+    return messages
+
+
+def generate_conversation_reply(
+    sprint: Sprint,
+    history: list[SprintConversationMessage],
+) -> str:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
         raise SummaryGenerationConfigError("OPENAI_API_KEY is not configured.")
 
     model = os.getenv("OPENAI_SUMMARY_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
-    prompt = _build_prompt(sprint)
+    system_prompt = _build_system_prompt(sprint)
+    api_input = _build_api_input(system_prompt, history)
 
     try:
         client = OpenAI(api_key=api_key)
         response = client.responses.create(
             model=model,
-            input=prompt,
+            input=api_input,
             temperature=0.2,
         )
     except Exception as exc:
         raise SummaryGenerationUpstreamError("Failed to generate sprint summary.") from exc
 
-    summary = (response.output_text or "").strip()
-    if not summary:
+    reply = (response.output_text or "").strip()
+    if not reply:
         raise SummaryGenerationUpstreamError("Summary response is empty.")
-    return summary
+    return reply

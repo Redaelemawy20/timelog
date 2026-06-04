@@ -3,6 +3,7 @@ import type {
   CreateSprintPayload,
   Sheet,
   SheetDetail,
+  SprintConversationMessage,
   UpdateSprintPayload,
 } from "../types/sheet";
 
@@ -119,12 +120,12 @@ export async function deleteSprint(
   }
 }
 
-export async function generateSprintSummary(sprintId: number): Promise<string> {
-  const res = await fetch(`${API_BASE}/sprints/${sprintId}/summary/`, {
-    method: "POST",
-  });
+export async function fetchSprintConversation(
+  sprintId: number,
+): Promise<SprintConversationMessage[]> {
+  const res = await fetch(`${API_BASE}/sprints/${sprintId}/conversation/`);
   if (!res.ok) {
-    let message = `Failed to generate summary (${res.status})`;
+    let message = `Failed to fetch conversation (${res.status})`;
     try {
       const parsed = (await res.json()) as Record<string, unknown>;
       if (typeof parsed.detail === "string") {
@@ -135,11 +136,31 @@ export async function generateSprintSummary(sprintId: number): Promise<string> {
     }
     throw new Error(message);
   }
-  const body = (await res.json()) as { summary?: unknown };
-  if (typeof body.summary !== "string") {
-    throw new Error("Invalid summary response.");
+  return res.json() as Promise<SprintConversationMessage[]>;
+}
+
+export async function sendSprintConversationMessage(
+  sprintId: number,
+  body: { content?: string; init?: boolean },
+): Promise<SprintConversationMessage[]> {
+  const res = await fetch(`${API_BASE}/sprints/${sprintId}/conversation/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let message = `Failed to send message (${res.status})`;
+    try {
+      const parsed = (await res.json()) as Record<string, unknown>;
+      if (typeof parsed.detail === "string") {
+        message = parsed.detail;
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
   }
-  return body.summary;
+  return res.json() as Promise<SprintConversationMessage[]>;
 }
 
 export async function exportSheetExcel(sheetId: number): Promise<void> {

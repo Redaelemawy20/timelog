@@ -98,3 +98,28 @@ class SprintRepo(models.Model):
 
     def __str__(self) -> str:
         return f"{self.project} ({self.sprint_id})"
+
+
+class SprintConversationMessage(models.Model):
+    class Role(models.TextChoices):
+        USER = "user", "User"
+        ASSISTANT = "assistant", "Assistant"
+
+    sprint = models.ForeignKey(
+        Sprint,
+        on_delete=models.CASCADE,
+        related_name="conversation_messages",
+    )
+    role = models.CharField(max_length=16, choices=Role.choices)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "sprint_conversation_messages"
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["sprint", "created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.role} ({self.sprint_id})"

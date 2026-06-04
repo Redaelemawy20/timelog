@@ -20,15 +20,18 @@ from .github_token import (
     verify_github_token,
 )
 from .llm_summary import (
+    INITIAL_USER_MESSAGE,
     SummaryGenerationConfigError,
     SummaryGenerationUpstreamError,
-    generate_sprint_summary_text,
+    generate_conversation_reply,
 )
-from .models import Sheet, SheetRepo, Sprint, SprintRepo
+from .models import Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
 from .serializers import (
     SheetCreateSerializer,
     SheetDetailSerializer,
     SheetListSerializer,
+    SprintConversationMessageSerializer,
+    SprintConversationSendSerializer,
     SprintCreateSerializer,
     SprintUpdateSerializer,
     SprintSerializer,
@@ -162,25 +165,71 @@ def api_sprint_update(request: Request, sheet_id: int, sprint_id: int) -> Respon
     return Response(SprintSerializer(sprint).data)
 
 
-@api_view(["POST"])
-def api_sprint_generate_summary(request: Request, sprint_id: int) -> Response:
-    sprint = get_object_or_404(
+def _sprint_with_repos(sprint_id: int) -> Sprint:
+    return get_object_or_404(
         Sprint.objects.prefetch_related("sprint_repos__sheet_repo"),
         pk=sprint_id,
     )
+
+
+def _conversation_messages(sprint: Sprint) -> list[SprintConversationMessage]:
+    return list(sprint.conversation_messages.order_by("created_at"))
+
+
+def _conversation_error_response(exc: Exception) -> Response:
+    if isinstance(exc, SummaryGenerationConfigError):
+        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    if isinstance(exc, SummaryGenerationUpstreamError):
+        return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+    raise exc
+
+
+@api_view(["GET", "POST"])
+def api_sprint_conversation(request: Request, sprint_id: int) -> Response:
+    sprint = _sprint_with_repos(sprint_id)
+
+    if request.method == "GET":
+        messages = _conversation_messages(sprint)
+        return Response(SprintConversationMessageSerializer(messages, many=True).data)
+
+    send = SprintConversationSendSerializer(data=request.data)
+    send.is_valid(raise_exception=True)
+    content = send.validated_data["content"]
+    init = send.validated_data["init"]
+    existing = _conversation_messages(sprint)
+
+    if init or (not existing and not content):
+        user_content = INITIAL_USER_MESSAGE
+    elif content:
+        user_content = content
+    else:
+        return Response(
+            {"detail": "Message content is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user_message = SprintConversationMessage.objects.create(
+        sprint=sprint,
+        role=SprintConversationMessage.Role.USER,
+        content=user_content,
+    )
+    history = existing + [user_message]
+
     try:
-        summary = generate_sprint_summary_text(sprint)
-    except SummaryGenerationConfigError as exc:
-        return Response(
-            {"detail": str(exc)},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
-    except SummaryGenerationUpstreamError as exc:
-        return Response(
-            {"detail": str(exc)},
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
-    return Response({"summary": summary})
+        reply = generate_conversation_reply(sprint, history)
+    except (SummaryGenerationConfigError, SummaryGenerationUpstreamError) as exc:
+        user_message.delete()
+        return _conversation_error_response(exc)
+
+    assistant_message = SprintConversationMessage.objects.create(
+        sprint=sprint,
+        role=SprintConversationMessage.Role.ASSISTANT,
+        content=reply,
+    )
+    return Response(
+        SprintConversationMessageSerializer([user_message, assistant_message], many=True).data,
+        status=status.HTTP_201_CREATED,
+    )
 
 
 @api_view(["GET"])

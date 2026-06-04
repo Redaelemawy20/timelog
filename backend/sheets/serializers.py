@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Sheet, SheetRepo, Sprint, SprintRepo
+from .models import Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
 
 MAX_REPOS_PER_SPRINT = 3
 
@@ -137,3 +137,17 @@ class SprintUpdateSerializer(serializers.Serializer):
         if "summary" not in attrs and "time_hours" not in attrs:
             raise serializers.ValidationError("Provide at least one field to update.")
         return attrs
+
+
+class SprintConversationMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SprintConversationMessage
+        fields = ["id", "role", "content", "created_at"]
+
+
+class SprintConversationSendSerializer(serializers.Serializer):
+    content = serializers.CharField(required=False, allow_blank=True, default="")
+    init = serializers.BooleanField(required=False, default=False)
+
+    def validate_content(self, value: str) -> str:
+        return value.strip()

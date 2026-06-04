@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { createSprint, deleteSprint, exportSheetExcel, fetchSheet, updateSprint } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SprintCard } from "../components/sheet/SprintCard";
+import { SprintChatPanel } from "../components/sheet/SprintChatPanel";
 import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,6 +21,11 @@ export default function SheetDetail() {
   const queryClient = useQueryClient();
   const [addSprintOpen, setAddSprintOpen] = useState(false);
   const [detailSprint, setDetailSprint] = useState<Sprint | null>(null);
+  const [chatSprint, setChatSprint] = useState<Sprint | null>(null);
+  const [summaryDraftInjection, setSummaryDraftInjection] = useState<{
+    sprintId: number;
+    text: string;
+  } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -143,6 +149,16 @@ export default function SheetDetail() {
 
   return (
     <div>
+      {chatSprint ? (
+        <SprintChatPanel
+          sprint={chatSprint}
+          onClose={() => setChatSprint(null)}
+          onUseSummary={(text) => {
+            setSummaryDraftInjection({ sprintId: chatSprint.id, text });
+            setChatSprint(null);
+          }}
+        />
+      ) : null}
       <SprintDetailDialog
         open={detailSprint !== null}
         onClose={() => setDetailSprint(null)}
@@ -232,6 +248,13 @@ export default function SheetDetail() {
                 key={sprint.id}
                 sprint={sprint}
                 onDetails={(item) => setDetailSprint(item)}
+                onOpenChat={(item) => setChatSprint(item)}
+                appliedSummaryDraft={
+                  summaryDraftInjection?.sprintId === sprint.id
+                    ? summaryDraftInjection.text
+                    : null
+                }
+                onAppliedSummaryDraftConsumed={() => setSummaryDraftInjection(null)}
                 onUpdateSprint={(sprintId, patch) =>
                   updateSprintRun.mutateAsync({ sprintId, patch })
                 }

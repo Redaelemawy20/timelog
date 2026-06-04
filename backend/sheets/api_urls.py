@@ -15,9 +15,9 @@ urlpatterns = [
         name="api_sprint_update",
     ),
     path(
-        "sprints/<int:sprint_id>/summary/",
-        views.api_sprint_generate_summary,
-        name="api_sprint_generate_summary",
+        "sprints/<int:sprint_id>/conversation/",
+        views.api_sprint_conversation,
+        name="api_sprint_conversation",
     ),
     path("sheets/<int:sheet_id>/", views.api_sheet_detail, name="api_sheet_detail"),
     path(
