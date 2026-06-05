@@ -1,7 +1,6 @@
 from datetime import datetime
 from io import BytesIO
 
-from django.conf import settings
 from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -13,10 +12,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .github_token import (
+    TokenReadResult,
     fetch_commits_for_range,
     fetch_github_user_repos,
     read_github_token,
-    resolve_token_path,
     verify_github_token,
 )
 from .llm_summary import (
@@ -36,6 +35,10 @@ from .serializers import (
     SprintUpdateSerializer,
     SprintSerializer,
 )
+
+
+def _github_token_read() -> TokenReadResult:
+    return read_github_token()
 
 
 @api_view(["GET", "POST"])
@@ -66,13 +69,7 @@ def api_sprint_create(request: Request, sheet_id: int) -> Response:
     range_end = data["range_end"]
     repo_specs = data["repos"]
 
-    resolved_path = resolve_token_path(settings.BASE_DIR, settings.GITHUB_TOKEN_FILE)
-    if resolved_path is None:
-        return Response(
-            {"detail": "GitHub token file is not configured (GITHUB_TOKEN_FILE)."},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
-    read = read_github_token(resolved_path)
+    read = _github_token_read()
     if not read.ok:
         return Response(
             {"detail": read.error},
@@ -234,12 +231,10 @@ def api_sprint_conversation(request: Request, sprint_id: int) -> Response:
 
 @api_view(["GET"])
 def api_github_token_status(request: Request) -> Response:
-    resolved_path = resolve_token_path(settings.BASE_DIR, settings.GITHUB_TOKEN_FILE)
-    if resolved_path is None:
-        return Response({"phase": "not_configured"})
-
-    read = read_github_token(resolved_path)
+    read = _github_token_read()
     if not read.ok:
+        if "not configured" in (read.error or "").lower():
+            return Response({"phase": "not_configured"})
         return Response({"phase": "file_error", "file_error": read.error})
 
     assert read.token is not None
@@ -252,15 +247,7 @@ def api_github_token_status(request: Request) -> Response:
 
 @api_view(["GET"])
 def api_github_repos(request: Request) -> Response:
-    """List GitHub repositories for the configured user token (GITHUB_TOKEN_FILE)."""
-    resolved_path = resolve_token_path(settings.BASE_DIR, settings.GITHUB_TOKEN_FILE)
-    if resolved_path is None:
-        return Response(
-            {"error": "GitHub token file is not configured (GITHUB_TOKEN_FILE)."},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
-
-    read = read_github_token(resolved_path)
+    read = _github_token_read()
     if not read.ok:
         return Response(
             {"error": read.error},

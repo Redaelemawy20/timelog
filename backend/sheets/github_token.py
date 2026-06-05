@@ -1,8 +1,8 @@
 import json
 import logging
+import os
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
@@ -26,25 +26,13 @@ class TokenVerifyResult:
     error: str | None = None
 
 
-def resolve_token_path(base_dir: Path, configured_path: str | None) -> Path | None:
-    if not configured_path:
-        return None
-    path = Path(configured_path)
-    if path.is_absolute():
-        return path
-    return base_dir / path
-
-
-def read_github_token(path: Path) -> TokenReadResult:
-    try:
-        token = path.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
-        return TokenReadResult(ok=False, error=f"Token file not found: {path}")
-    except OSError as exc:
-        return TokenReadResult(ok=False, error=str(exc))
-
+def read_github_token() -> TokenReadResult:
+    token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
-        return TokenReadResult(ok=False, error="Token file is empty.")
+        return TokenReadResult(
+            ok=False,
+            error="GitHub token is not configured (GITHUB_TOKEN).",
+        )
     return TokenReadResult(ok=True, token=token)
 
 
