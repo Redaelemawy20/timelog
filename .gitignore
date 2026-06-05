@@ -35,6 +35,8 @@ __pycache__/
 *.so
 .Python
 db.sqlite3
+backend/fixtures/time_log_seed.json
+backend/scripts/
 .venv/
 venv/
 env/
