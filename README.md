@@ -43,6 +43,29 @@ python manage.py export_seed    # writes fixtures/time_log_seed.json
 python manage.py seed --force   # reload seed into the database
 ```
 
+## Deploy (Vercel + Render)
+
+**Backend (Render)** — set root directory to `backend`, or deploy from repo root with `render.yaml` (Blueprint).
+
+| Variable | Required |
+|----------|----------|
+| `DATABASE_URL` | Supabase URI (session pooler, port 5432) |
+| `SECRET_KEY` | Random string (Render can generate) |
+| `GITHUB_TOKEN` | GitHub PAT |
+| `OPENAI_API_KEY` | OpenAI key |
+| `FRONTEND_URL` | Vercel app URL, e.g. `https://your-app.vercel.app` |
+| `DEBUG` | `false` |
+
+Health check: `/api/health/`
+
+**Frontend (Vercel)** — set root directory to `frontend`.
+
+| Variable | Required |
+|----------|----------|
+| `VITE_API_BASE` | Render API base, e.g. `https://your-service.onrender.com/api` |
+
+Build command: `pnpm build` (install: `pnpm install`). No env var needed locally if you use the Vite `/api` proxy.
+
 ## Purpose
 
 The project helps teams keep time and activity records in one place, with a React frontend and a Django REST backend.

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: time-log-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

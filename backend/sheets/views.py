@@ -41,6 +41,11 @@ def _github_token_read() -> TokenReadResult:
     return read_github_token()
 
 
+@api_view(["GET"])
+def api_health(request: Request) -> Response:
+    return Response({"status": "ok"})
+
+
 @api_view(["GET", "POST"])
 def api_sheet_list(request: Request) -> Response:
     if request.method == "GET":
