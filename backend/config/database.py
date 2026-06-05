@@ -3,6 +3,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 
 def _sanitize_database_url(url: str) -> str:
@@ -13,15 +14,11 @@ def _sanitize_database_url(url: str) -> str:
 
 
 def build_databases(base_dir: Path) -> dict:
-    sqlite_path = base_dir / "db.sqlite3"
-    sqlite = {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": sqlite_path,
-    }
-
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not database_url or "[" in database_url:
-        return {"default": sqlite}
+        raise ImproperlyConfigured(
+            "Set DATABASE_URL in backend/.env to your Supabase PostgreSQL connection string."
+        )
 
     postgres = dj_database_url.parse(
         _sanitize_database_url(database_url),
@@ -30,7 +27,4 @@ def build_databases(base_dir: Path) -> dict:
     )
     postgres.setdefault("OPTIONS", {})
     postgres["OPTIONS"]["sslmode"] = "require"
-    return {
-        "default": postgres,
-        "sqlite": sqlite,
-    }
+    return {"default": postgres}

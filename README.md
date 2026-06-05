@@ -26,31 +26,22 @@ Copy `mcp.json.example` to `.cursor/mcp.json` (or merge into your existing file)
 
 PAT fallback (CI only): set `SUPABASE_ACCESS_TOKEN` and use `Authorization: Bearer ${env:SUPABASE_ACCESS_TOKEN}` in `headers`. Create tokens at https://supabase.com/dashboard/account/tokens
 
-## Database (SQLite → Supabase)
+## Database (Supabase)
 
-By default the API uses `backend/db.sqlite3`. To move to Supabase while keeping that file as backup:
+Set `DATABASE_URL` in `backend/.env` to your Supabase PostgreSQL URI (see `backend/env.example`).
 
-1. Export a seed from SQLite (works with or without `DATABASE_URL` set):
+```bash
+cd backend
+python manage.py migrate
+python manage.py runserver
+```
 
-   ```bash
-   cd backend
-   python manage.py export_sqlite_seed
-   ```
+Optional backup/restore via JSON seed:
 
-   Writes `backend/fixtures/time_log_seed.json` (gitignored).
-
-2. Set `DATABASE_URL` in `backend/.env` to your Supabase **URI** (real password, no placeholder brackets).
-
-3. Apply schema and load the seed:
-
-   ```bash
-   python manage.py migrate
-   python manage.py seed --force
-   ```
-
-`db.sqlite3` is not deleted. Remove `DATABASE_URL` from `.env` to run on SQLite only again.
-
-Re-export the seed any time your local SQLite data changes, then run `seed --force` on Supabase.
+```bash
+python manage.py export_seed    # writes fixtures/time_log_seed.json
+python manage.py seed --force   # reload seed into the database
+```
 
 ## Purpose
 

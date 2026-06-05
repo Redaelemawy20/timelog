@@ -23,7 +23,7 @@ FIXTURE_NAME = "time_log_seed"
 
 
 class Command(BaseCommand):
-    help = "Load time_log_seed.json into the default database (Supabase when DATABASE_URL is set)."
+    help = "Load time_log_seed.json into the database."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -33,12 +33,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        default_engine = settings.DATABASES["default"]["ENGINE"]
-        if "sqlite" in default_engine and "sqlite" not in settings.DATABASES:
-            raise CommandError(
-                "DATABASE_URL is not set. Add your Supabase connection string to .env first."
-            )
-
         fixture_dirs = getattr(settings, "FIXTURE_DIRS", [])
         if not fixture_dirs:
             raise CommandError("FIXTURE_DIRS is not configured in settings.")
