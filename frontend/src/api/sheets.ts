@@ -1,4 +1,5 @@
 import { API_BASE } from "./client";
+import { apiFetch } from "./apiFetch";
 import type {
   CreateSheetPayload,
   CreateSprintPayload,
@@ -10,13 +11,13 @@ import type {
 } from "../types/sheet";
 
 export async function fetchSheets(signal?: AbortSignal): Promise<Sheet[]> {
-  const res = await fetch(`${API_BASE}/sheets/`, { signal });
+  const res = await apiFetch(`${API_BASE}/sheets/`, { signal });
   if (!res.ok) throw new Error(`Failed to fetch sheets: ${res.status}`);
   return res.json() as Promise<Sheet[]>;
 }
 
 export async function fetchSheet(id: number): Promise<SheetDetail> {
-  const res = await fetch(`${API_BASE}/sheets/${id}/`);
+  const res = await apiFetch(`${API_BASE}/sheets/${id}/`);
   if (!res.ok) throw new Error(`Failed to fetch sheet ${id}: ${res.status}`);
   return res.json() as Promise<SheetDetail>;
 }
@@ -25,9 +26,8 @@ export async function createSprint(
   sheetId: number,
   body: CreateSprintPayload,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/`, {
+  const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/sprints/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -47,9 +47,8 @@ export async function createSprint(
 }
 
 export async function createSheet(payload: CreateSheetPayload): Promise<Sheet> {
-  const res = await fetch(`${API_BASE}/sheets/`, {
+  const res = await apiFetch(`${API_BASE}/sheets/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -76,9 +75,8 @@ export async function createSheet(payload: CreateSheetPayload): Promise<Sheet> {
 }
 
 export async function updateSheet(id: number, body: UpdateSheetPayload): Promise<Sheet> {
-  const res = await fetch(`${API_BASE}/sheets/${id}/`, {
+  const res = await apiFetch(`${API_BASE}/sheets/${id}/`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -100,7 +98,7 @@ export async function updateSheet(id: number, body: UpdateSheetPayload): Promise
 }
 
 export async function deleteSheet(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${id}/`, { method: "DELETE" });
+  const res = await apiFetch(`${API_BASE}/sheets/${id}/`, { method: "DELETE" });
   if (!res.ok) {
     let message = `Failed to delete sheet (${res.status})`;
     try {
@@ -118,9 +116,8 @@ export async function updateSprint(
   sprintId: number,
   body: UpdateSprintPayload,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/`, {
+  const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -145,7 +142,7 @@ export async function deleteSprint(
   sheetId: number,
   sprintId: number,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/`, {
+  const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/sprints/${sprintId}/`, {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -165,7 +162,7 @@ export async function deleteSprint(
 export async function fetchSprintConversation(
   sprintId: number,
 ): Promise<SprintConversationMessage[]> {
-  const res = await fetch(`${API_BASE}/sprints/${sprintId}/conversation/`);
+  const res = await apiFetch(`${API_BASE}/sprints/${sprintId}/conversation/`);
   if (!res.ok) {
     let message = `Failed to fetch conversation (${res.status})`;
     try {
@@ -185,9 +182,8 @@ export async function sendSprintConversationMessage(
   sprintId: number,
   body: { content?: string; init?: boolean },
 ): Promise<SprintConversationMessage[]> {
-  const res = await fetch(`${API_BASE}/sprints/${sprintId}/conversation/`, {
+  const res = await apiFetch(`${API_BASE}/sprints/${sprintId}/conversation/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -206,7 +202,7 @@ export async function sendSprintConversationMessage(
 }
 
 export async function exportSheetExcel(sheetId: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/sheets/${sheetId}/export/`);
+  const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/export/`);
   if (!res.ok) {
     throw new Error(`Failed to export sheet (${res.status})`);
   }

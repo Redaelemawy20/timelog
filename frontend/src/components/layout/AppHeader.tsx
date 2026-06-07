@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import type { GithubTokenStatus } from "../../types/github";
+import { useAuth } from "../../context/AuthContext";
 import { tokenChipLabel, tokenTooltip } from "../../lib/githubTokenDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   );
 
 export function AppHeader({ tokenStatus }: AppHeaderProps) {
+  const { user, logout } = useAuth();
   const tokenOk = tokenStatus?.phase === "success";
 
   return (
@@ -32,19 +34,27 @@ export function AppHeader({ tokenStatus }: AppHeaderProps) {
               Manage clients, sheets, and sprint time logs.
             </p>
           </div>
-          {tokenStatus ? (
-            <Badge
-              variant="outline"
-              title={tokenTooltip(tokenStatus)}
-              className={
-                tokenOk
-                  ? "shrink-0 self-start font-normal text-muted-foreground"
-                  : "shrink-0 self-start border-amber-200 bg-amber-50 font-normal text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-              }
-            >
-              {tokenChipLabel(tokenStatus)}
-            </Badge>
-          ) : null}
+          <div className="flex shrink-0 flex-wrap items-center gap-2 self-start">
+            {user ? (
+              <span className="text-sm text-muted-foreground">{user.username}</span>
+            ) : null}
+            <Button type="button" variant="outline" size="sm" onClick={logout}>
+              Sign out
+            </Button>
+            {tokenStatus ? (
+              <Badge
+                variant="outline"
+                title={tokenTooltip(tokenStatus)}
+                className={
+                  tokenOk
+                    ? "font-normal text-muted-foreground"
+                    : "border-amber-200 bg-amber-50 font-normal text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                }
+              >
+                {tokenChipLabel(tokenStatus)}
+              </Badge>
+            ) : null}
+          </div>
         </div>
         <nav className="flex flex-wrap gap-1" aria-label="Main">
           <NavLink to="/" end className={navLinkClass}>

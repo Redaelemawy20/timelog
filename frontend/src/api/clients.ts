@@ -1,17 +1,17 @@
 import { API_BASE } from "./client";
+import { apiFetch } from "./apiFetch";
 import type { Client } from "../types/sheet";
 
 export async function fetchClients(signal?: AbortSignal): Promise<Client[]> {
-  const res = await fetch(`${API_BASE}/clients/`, { signal });
+  const res = await apiFetch(`${API_BASE}/clients/`, { signal });
   if (res.status === 404) return [];
   if (!res.ok) throw new Error(`Failed to fetch clients (${res.status})`);
   return res.json() as Promise<Client[]>;
 }
 
 export async function createClient(name: string): Promise<Client> {
-  const res = await fetch(`${API_BASE}/clients/`, {
+  const res = await apiFetch(`${API_BASE}/clients/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });
   if (!res.ok) {
@@ -34,9 +34,8 @@ export async function createClient(name: string): Promise<Client> {
 }
 
 export async function updateClient(id: number, name: string): Promise<Client> {
-  const res = await fetch(`${API_BASE}/clients/${id}/`, {
+  const res = await apiFetch(`${API_BASE}/clients/${id}/`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });
   if (!res.ok) {
@@ -56,7 +55,7 @@ export async function updateClient(id: number, name: string): Promise<Client> {
 }
 
 export async function deleteClient(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/clients/${id}/`, { method: "DELETE" });
+  const res = await apiFetch(`${API_BASE}/clients/${id}/`, { method: "DELETE" });
   if (!res.ok) {
     let message = `Failed to delete client (${res.status})`;
     try {

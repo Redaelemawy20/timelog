@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { createClient } from "./api/clients";
+import { GuestRoute, ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ClientNameDialog } from "./components/clients/ClientNameDialog";
 import { AppHeader } from "./components/layout/AppHeader";
 import { CreateSheetDialog } from "./components/sheet/CreateSheetDialog";
@@ -10,10 +11,11 @@ import { clientKeys } from "./lib/clientQueryKeys";
 import { dashboardKeys } from "./lib/dashboardQueryKeys";
 import ClientsPage from "./pages/ClientsPage";
 import Dashboard from "./pages/Dashboard";
+import LoginPage from "./pages/LoginPage";
 import SheetDetail from "./pages/SheetDetail";
 import SheetsPage from "./pages/SheetsPage";
 
-export default function App() {
+function AppLayout() {
   const queryClient = useQueryClient();
   const tokenStatus = useGithubTokenStatus();
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
@@ -82,5 +84,28 @@ export default function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
