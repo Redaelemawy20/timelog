@@ -9,6 +9,7 @@ import { dashboardKeys } from "../lib/dashboardQueryKeys";
 import type { Client } from "../types/sheet";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ClientsPageProps {
@@ -19,6 +20,8 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
   const queryClient = useQueryClient();
   const [renameTarget, setRenameTarget] = useState<Client | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
+  const [blockedDeleteMessage, setBlockedDeleteMessage] = useState<string | null>(null);
 
   const clientsQuery = useQuery({
     queryKey: clientKeys.list(),
@@ -62,11 +65,19 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
   const handleDelete = (client: Client) => {
     const count = client.sheet_count ?? 0;
     if (count > 0) {
-      window.alert("Remove or reassign sheets before deleting this client.");
+      setBlockedDeleteMessage(
+        `Remove or reassign ${count} ${count === 1 ? "sheet" : "sheets"} before deleting "${client.name}".`,
+      );
       return;
     }
-    if (!window.confirm(`Delete client "${client.name}"?`)) return;
-    deleteMutation.mutate(client.id);
+    setDeleteTarget(client);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
   };
 
   return (
@@ -172,6 +183,31 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
           }
         }}
         onSubmit={handleRenameSubmit}
+      />
+
+      <ConfirmDialog
+        open={blockedDeleteMessage !== null}
+        title="Cannot delete client"
+        description={blockedDeleteMessage ?? ""}
+        alertOnly
+        onClose={() => setBlockedDeleteMessage(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete client"
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        destructive
+        submitting={deleteMutation.isPending}
+        onClose={() => {
+          if (!deleteMutation.isPending) setDeleteTarget(null);
+        }}
+        onConfirm={confirmDelete}
       />
     </section>
   );

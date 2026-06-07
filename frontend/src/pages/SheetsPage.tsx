@@ -12,6 +12,7 @@ import { sheetKeys } from "../lib/sheetQueryKeys";
 import type { Sheet } from "../types/sheet";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ export default function SheetsPage({ onAddSheet }: SheetsPageProps) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [editTarget, setEditTarget] = useState<Sheet | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Sheet | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
   const sheetsQuery = useQuery({
@@ -75,8 +77,14 @@ export default function SheetsPage({ onAddSheet }: SheetsPageProps) {
   }, [sheets, query]);
 
   const handleDelete = (sheet: Sheet) => {
-    if (!window.confirm(`Delete sheet "${sheet.name}" and all its sprints?`)) return;
-    deleteMutation.mutate(sheet.id);
+    setDeleteTarget(sheet);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
   };
 
   return (
@@ -207,6 +215,23 @@ export default function SheetsPage({ onAddSheet }: SheetsPageProps) {
           if (!editTarget) return;
           editMutation.mutate({ id: editTarget.id, name, client_id });
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete sheet"
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}" and all its sprints? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        destructive
+        submitting={deleteMutation.isPending}
+        onClose={() => {
+          if (!deleteMutation.isPending) setDeleteTarget(null);
+        }}
+        onConfirm={confirmDelete}
       />
     </section>
   );
