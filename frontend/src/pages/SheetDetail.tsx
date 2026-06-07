@@ -37,7 +37,7 @@ export default function SheetDetail() {
           variant="ghost"
           size="sm"
           className="gap-1 px-0"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/sheets")}
         >
           <ArrowLeft className="size-4" aria-hidden />
           Back to sheets
@@ -123,7 +123,7 @@ export default function SheetDetail() {
           variant="ghost"
           size="sm"
           className="gap-1 px-0"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/sheets")}
         >
           <ArrowLeft className="size-4" aria-hidden />
           Back to sheets
@@ -181,7 +181,7 @@ export default function SheetDetail() {
         variant="ghost"
         size="sm"
         className="mb-4 gap-1 px-0"
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/sheets")}
       >
         <ArrowLeft className="size-4" aria-hidden />
         Back to sheets

@@ -32,3 +32,39 @@ export async function createClient(name: string): Promise<Client> {
   }
   return res.json() as Promise<Client>;
 }
+
+export async function updateClient(id: number, name: string): Promise<Client> {
+  const res = await fetch(`${API_BASE}/clients/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    let message = `Failed to update client (${res.status})`;
+    try {
+      const body = (await res.json()) as Record<string, unknown>;
+      if (typeof body.detail === "string") message = body.detail;
+      else if (body.name && Array.isArray(body.name) && body.name.length) {
+        message = String(body.name[0]);
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+  return res.json() as Promise<Client>;
+}
+
+export async function deleteClient(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/clients/${id}/`, { method: "DELETE" });
+  if (!res.ok) {
+    let message = `Failed to delete client (${res.status})`;
+    try {
+      const body = (await res.json()) as Record<string, unknown>;
+      if (typeof body.detail === "string") message = body.detail;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+}

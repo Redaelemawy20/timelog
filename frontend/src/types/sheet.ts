@@ -1,8 +1,15 @@
 export interface Client {
   id: number;
   name: string;
+  sheet_count?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface DashboardStats {
+  client_count: number;
+  sheet_count: number;
+  sprint_count: number;
 }
 
 export interface SheetRepo {
@@ -51,6 +58,11 @@ export interface Sheet {
 export interface CreateSheetPayload {
   name: string;
   client_id: number;
+}
+
+export interface UpdateSheetPayload {
+  name?: string;
+  client_id?: number;
 }
 
 /** Home list row: base sheet plus quick stats for scanning. */

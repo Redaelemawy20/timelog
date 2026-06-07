@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, fetchClients } from "../../api/clients";
 import { createSheet } from "../../api/sheets";
 import { clientKeys } from "../../lib/clientQueryKeys";
+import { dashboardKeys } from "../../lib/dashboardQueryKeys";
 import { sheetKeys } from "../../lib/sheetQueryKeys";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +57,7 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
       setNewClientName("");
       setClientError(null);
       void queryClient.invalidateQueries({ queryKey: clientKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err: unknown) => {
       setClientError(err instanceof Error ? err.message : String(err));
@@ -66,6 +68,7 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
     mutationFn: (payload: { name: string; client_id: number }) => createSheet(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: sheetKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
       onClose();
     },
     onError: (err: unknown) => {

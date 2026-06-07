@@ -6,6 +6,7 @@ import type {
   SheetDetail,
   SprintConversationMessage,
   UpdateSprintPayload,
+  UpdateSheetPayload,
 } from "../types/sheet";
 
 export async function fetchSheets(signal?: AbortSignal): Promise<Sheet[]> {
@@ -72,6 +73,44 @@ export async function createSheet(payload: CreateSheetPayload): Promise<Sheet> {
     throw new Error(message);
   }
   return res.json() as Promise<Sheet>;
+}
+
+export async function updateSheet(id: number, body: UpdateSheetPayload): Promise<Sheet> {
+  const res = await fetch(`${API_BASE}/sheets/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let message = `Failed to update sheet (${res.status})`;
+    try {
+      const parsed = (await res.json()) as Record<string, unknown>;
+      if (typeof parsed.detail === "string") message = parsed.detail;
+      else if (parsed.name && Array.isArray(parsed.name) && parsed.name.length) {
+        message = String(parsed.name[0]);
+      } else if (parsed.client_id && Array.isArray(parsed.client_id) && parsed.client_id.length) {
+        message = String(parsed.client_id[0]);
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+  return res.json() as Promise<Sheet>;
+}
+
+export async function deleteSheet(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/sheets/${id}/`, { method: "DELETE" });
+  if (!res.ok) {
+    let message = `Failed to delete sheet (${res.status})`;
+    try {
+      const parsed = (await res.json()) as Record<string, unknown>;
+      if (typeof parsed.detail === "string") message = parsed.detail;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
 }
 
 export async function updateSprint(

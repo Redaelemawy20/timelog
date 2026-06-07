@@ -6,12 +6,32 @@ MAX_REPOS_PER_SPRINT = 3
 
 
 class ClientSerializer(serializers.ModelSerializer):
+    sheet_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Client
-        fields = ["id", "name", "created_at", "updated_at"]
+        fields = ["id", "name", "sheet_count", "created_at", "updated_at"]
+
+    def get_sheet_count(self, obj: Client) -> int:
+        annotated = getattr(obj, "sheet_count", None)
+        if annotated is not None:
+            return annotated
+        return obj.sheets.count()
 
 
 class ClientCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = ["name"]
+
+    def validate_name(self, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Name is required.")
+        return cleaned
+
+
+class ClientUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ["name"]
@@ -86,6 +106,29 @@ class SheetCreateSerializer(serializers.ModelSerializer):
         if not cleaned:
             raise serializers.ValidationError("Name is required.")
         return cleaned
+
+
+class SheetUpdateSerializer(serializers.ModelSerializer):
+    client_id = serializers.PrimaryKeyRelatedField(
+        source="client",
+        queryset=Client.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = Sheet
+        fields = ["name", "client_id"]
+
+    def validate_name(self, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Name is required.")
+        return cleaned
+
+    def validate(self, attrs: dict) -> dict:
+        if not attrs and not self.partial:
+            raise serializers.ValidationError("Provide at least one field to update.")
+        return attrs
 
 
 class SheetDetailSerializer(serializers.ModelSerializer):

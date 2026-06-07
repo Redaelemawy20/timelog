@@ -2,6 +2,7 @@ from datetime import datetime
 from io import BytesIO
 
 from django.db import transaction
+from django.db.models import Count
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from openpyxl import Workbook
@@ -28,9 +29,11 @@ from .models import Client, Sheet, SheetRepo, Sprint, SprintConversationMessage,
 from .serializers import (
     ClientCreateSerializer,
     ClientSerializer,
+    ClientUpdateSerializer,
     SheetCreateSerializer,
     SheetDetailSerializer,
     SheetListSerializer,
+    SheetUpdateSerializer,
     SprintConversationMessageSerializer,
     SprintConversationSendSerializer,
     SprintCreateSerializer,
@@ -48,16 +51,46 @@ def api_health(request: Request) -> Response:
     return Response({"status": "ok"})
 
 
+@api_view(["GET"])
+def api_dashboard_stats(request: Request) -> Response:
+    return Response(
+        {
+            "client_count": Client.objects.count(),
+            "sheet_count": Sheet.objects.count(),
+            "sprint_count": Sprint.objects.count(),
+        }
+    )
+
+
 @api_view(["GET", "POST"])
 def api_client_list(request: Request) -> Response:
     if request.method == "GET":
-        clients = Client.objects.all()
+        clients = Client.objects.annotate(sheet_count=Count("sheets")).all()
         return Response(ClientSerializer(clients, many=True).data)
 
     create = ClientCreateSerializer(data=request.data)
     create.is_valid(raise_exception=True)
     client = create.save()
     return Response(ClientSerializer(client).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PATCH", "DELETE"])
+def api_client_detail(request: Request, client_id: int) -> Response:
+    client = get_object_or_404(Client, pk=client_id)
+
+    if request.method == "DELETE":
+        if client.sheets.exists():
+            return Response(
+                {"detail": "Remove or reassign sheets before deleting this client."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        client.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    update = ClientUpdateSerializer(client, data=request.data, partial=True)
+    update.is_valid(raise_exception=True)
+    client = update.save()
+    return Response(ClientSerializer(client).data)
 
 
 @api_view(["GET", "POST"])
@@ -72,10 +105,22 @@ def api_sheet_list(request: Request) -> Response:
     return Response(SheetListSerializer(sheet).data, status=status.HTTP_201_CREATED)
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH", "DELETE"])
 def api_sheet_detail(request: Request, sheet_id: int) -> Response:
     sheet = get_object_or_404(Sheet.objects.select_related("client"), pk=sheet_id)
-    return Response(SheetDetailSerializer(sheet).data)
+
+    if request.method == "GET":
+        return Response(SheetDetailSerializer(sheet).data)
+
+    if request.method == "DELETE":
+        sheet.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    update = SheetUpdateSerializer(sheet, data=request.data, partial=True)
+    update.is_valid(raise_exception=True)
+    sheet = update.save()
+    sheet = Sheet.objects.select_related("client").get(pk=sheet.pk)
+    return Response(SheetListSerializer(sheet).data)
 
 
 @api_view(["POST"])
