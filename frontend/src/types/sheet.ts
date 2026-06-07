@@ -1,3 +1,10 @@
+export interface Client {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SheetRepo {
   id: number;
   owner: string;
@@ -36,8 +43,14 @@ export interface Sprint {
 export interface Sheet {
   id: number;
   name: string;
+  client: Client;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreateSheetPayload {
+  name: string;
+  client_id: number;
 }
 
 /** Home list row: base sheet plus quick stats for scanning. */

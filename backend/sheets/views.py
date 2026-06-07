@@ -24,8 +24,10 @@ from .llm_summary import (
     SummaryGenerationUpstreamError,
     generate_conversation_reply,
 )
-from .models import Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
+from .models import Client, Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
 from .serializers import (
+    ClientCreateSerializer,
+    ClientSerializer,
     SheetCreateSerializer,
     SheetDetailSerializer,
     SheetListSerializer,
@@ -47,9 +49,21 @@ def api_health(request: Request) -> Response:
 
 
 @api_view(["GET", "POST"])
+def api_client_list(request: Request) -> Response:
+    if request.method == "GET":
+        clients = Client.objects.all()
+        return Response(ClientSerializer(clients, many=True).data)
+
+    create = ClientCreateSerializer(data=request.data)
+    create.is_valid(raise_exception=True)
+    client = create.save()
+    return Response(ClientSerializer(client).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
 def api_sheet_list(request: Request) -> Response:
     if request.method == "GET":
-        sheets = Sheet.objects.all()
+        sheets = Sheet.objects.select_related("client").all()
         return Response(SheetListSerializer(sheets, many=True).data)
 
     create = SheetCreateSerializer(data=request.data)
@@ -60,7 +74,7 @@ def api_sheet_list(request: Request) -> Response:
 
 @api_view(["GET"])
 def api_sheet_detail(request: Request, sheet_id: int) -> Response:
-    sheet = get_object_or_404(Sheet, pk=sheet_id)
+    sheet = get_object_or_404(Sheet.objects.select_related("client"), pk=sheet_id)
     return Response(SheetDetailSerializer(sheet).data)
 
 

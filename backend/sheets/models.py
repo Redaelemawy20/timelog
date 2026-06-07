@@ -1,7 +1,21 @@
 from django.db import models
 
 
+class Client(models.Model):
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "clients"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Sheet(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="sheets")
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

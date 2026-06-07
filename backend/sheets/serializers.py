@@ -1,8 +1,26 @@
 from rest_framework import serializers
 
-from .models import Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
+from .models import Client, Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
 
 MAX_REPOS_PER_SPRINT = 3
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = ["id", "name", "created_at", "updated_at"]
+
+
+class ClientCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = ["name"]
+
+    def validate_name(self, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Name is required.")
+        return cleaned
 
 
 class SheetRepoSerializer(serializers.ModelSerializer):
@@ -46,15 +64,22 @@ class SprintSerializer(serializers.ModelSerializer):
 
 
 class SheetListSerializer(serializers.ModelSerializer):
+    client = ClientSerializer(read_only=True)
+
     class Meta:
         model = Sheet
-        fields = ["id", "name", "created_at", "updated_at"]
+        fields = ["id", "name", "client", "created_at", "updated_at"]
 
 
 class SheetCreateSerializer(serializers.ModelSerializer):
+    client_id = serializers.PrimaryKeyRelatedField(
+        source="client",
+        queryset=Client.objects.all(),
+    )
+
     class Meta:
         model = Sheet
-        fields = ["name"]
+        fields = ["name", "client_id"]
 
     def validate_name(self, value: str) -> str:
         cleaned = value.strip()
@@ -64,12 +89,13 @@ class SheetCreateSerializer(serializers.ModelSerializer):
 
 
 class SheetDetailSerializer(serializers.ModelSerializer):
+    client = ClientSerializer(read_only=True)
     repos = SheetRepoSerializer(many=True, read_only=True)
     sprints = SprintSerializer(many=True, read_only=True)
 
     class Meta:
         model = Sheet
-        fields = ["id", "name", "created_at", "updated_at", "repos", "sprints"]
+        fields = ["id", "name", "client", "created_at", "updated_at", "repos", "sprints"]
 
 
 class RepoRefSerializer(serializers.Serializer):

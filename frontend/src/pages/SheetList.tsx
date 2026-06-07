@@ -25,7 +25,11 @@ export default function SheetList() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sheets;
-    return sheets.filter((s) => s.name.toLowerCase().includes(q));
+    return sheets.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.client.name.toLowerCase().includes(q),
+    );
   }, [sheets, query]);
 
   if (isPending) return <SheetListSkeleton />;
@@ -73,7 +77,7 @@ export default function SheetList() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter by name…"
+        placeholder="Filter by sheet or client…"
         className="max-w-md"
       />
     </div>
@@ -106,6 +110,7 @@ export default function SheetList() {
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline gap-2">
                     <span className="font-medium text-foreground">{sheet.name}</span>
+                    <span className="text-xs text-muted-foreground">{sheet.client.name}</span>
                     <span className="whitespace-nowrap text-xs text-muted-foreground">
                       Updated{" "}
                       {new Date(sheet.updated_at).toLocaleDateString(undefined, {

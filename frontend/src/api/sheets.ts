@@ -1,5 +1,6 @@
 import { API_BASE } from "./client";
 import type {
+  CreateSheetPayload,
   CreateSprintPayload,
   Sheet,
   SheetDetail,
@@ -44,11 +45,11 @@ export async function createSprint(
   }
 }
 
-export async function createSheet(name: string): Promise<Sheet> {
+export async function createSheet(payload: CreateSheetPayload): Promise<Sheet> {
   const res = await fetch(`${API_BASE}/sheets/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     let message = `Failed to create sheet (${res.status})`;
@@ -62,6 +63,8 @@ export async function createSheet(name: string): Promise<Sheet> {
         message = String(body.name[0]);
       } else if (typeof body.name === "string") {
         message = body.name;
+      } else if (body.client_id && Array.isArray(body.client_id) && body.client_id.length) {
+        message = String(body.client_id[0]);
       }
     } catch {
       /* keep default */

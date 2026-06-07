@@ -1,0 +1,34 @@
+import { API_BASE } from "./client";
+import type { Client } from "../types/sheet";
+
+export async function fetchClients(signal?: AbortSignal): Promise<Client[]> {
+  const res = await fetch(`${API_BASE}/clients/`, { signal });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`Failed to fetch clients (${res.status})`);
+  return res.json() as Promise<Client[]>;
+}
+
+export async function createClient(name: string): Promise<Client> {
+  const res = await fetch(`${API_BASE}/clients/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    let message = `Failed to create client (${res.status})`;
+    try {
+      const body = (await res.json()) as Record<string, unknown>;
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (body.name && Array.isArray(body.name) && body.name.length) {
+        message = String(body.name[0]);
+      } else if (typeof body.name === "string") {
+        message = body.name;
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+  return res.json() as Promise<Client>;
+}

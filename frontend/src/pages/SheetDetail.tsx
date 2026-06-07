@@ -187,7 +187,8 @@ export default function SheetDetail() {
         Back to sheets
       </Button>
 
-      <h2 className="mb-6 text-2xl font-semibold tracking-tight text-foreground">{sheet.name}</h2>
+      <h2 className="text-2xl font-semibold tracking-tight text-foreground">{sheet.name}</h2>
+      <p className="mb-6 text-sm text-muted-foreground">{sheet.client.name}</p>
 
       <section className="mb-8">
         <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">

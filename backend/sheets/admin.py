@@ -1,12 +1,19 @@
 from django.contrib import admin
 
-from .models import Sheet, SheetRepo, Sprint, SprintRepo
+from .models import Client, Sheet, SheetRepo, Sprint, SprintRepo
+
+
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
+    list_display = ("name", "updated_at")
+    search_fields = ("name",)
 
 
 @admin.register(Sheet)
 class SheetAdmin(admin.ModelAdmin):
-    list_display = ("name", "updated_at")
-    search_fields = ("name",)
+    list_display = ("name", "client", "updated_at")
+    search_fields = ("name", "client__name")
+    list_filter = ("client",)
 
 
 @admin.register(SheetRepo)
