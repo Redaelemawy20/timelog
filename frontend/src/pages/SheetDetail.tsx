@@ -29,7 +29,8 @@ export default function SheetDetail() {
   } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const [isRepublishing, setIsRepublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
 
   if (sheetId === null) {
@@ -99,7 +100,7 @@ export default function SheetDetail() {
 
   const handleTogglePublish = async (published: boolean) => {
     if (!sheetId) return;
-    setIsPublishing(true);
+    setIsToggling(true);
     setPublishError(null);
     try {
       if (published) {
@@ -117,13 +118,13 @@ export default function SheetDetail() {
             : "Unpublish failed",
       );
     } finally {
-      setIsPublishing(false);
+      setIsToggling(false);
     }
   };
 
   const handleRepublish = async () => {
     if (!sheetId) return;
-    setIsPublishing(true);
+    setIsRepublishing(true);
     setPublishError(null);
     try {
       await publishSheet(sheetId);
@@ -131,7 +132,7 @@ export default function SheetDetail() {
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Re-publish failed");
     } finally {
-      setIsPublishing(false);
+      setIsRepublishing(false);
     }
   };
 
@@ -233,7 +234,8 @@ export default function SheetDetail() {
 
       <SheetShareBar
         sheet={sheet}
-        isPublishing={isPublishing}
+        isToggling={isToggling}
+        isRepublishing={isRepublishing}
         publishError={publishError}
         onTogglePublish={(published) => void handleTogglePublish(published)}
         onRepublish={() => void handleRepublish()}
