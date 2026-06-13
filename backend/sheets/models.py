@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 
@@ -19,6 +21,10 @@ class Sheet(models.Model):
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_snapshot = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "sheets"

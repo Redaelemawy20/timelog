@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Download, Globe, GlobeLock, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSprint, deleteSprint, exportSheetExcel, fetchSheet, updateSprint } from "../api/sheets";
+import { createSprint, deleteSprint, exportSheetExcel, fetchSheet, publishSheet, unpublishSheet, updateSprint } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SprintCard } from "../components/sheet/SprintCard";
 import { SprintChatPanel } from "../components/sheet/SprintChatPanel";
@@ -28,6 +28,9 @@ export default function SheetDetail() {
   } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   if (sheetId === null) {
     return (
@@ -92,6 +95,42 @@ export default function SheetDetail() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handlePublish = async () => {
+    if (!sheetId) return;
+    setIsPublishing(true);
+    setPublishError(null);
+    try {
+      await publishSheet(sheetId);
+      await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Publish failed");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!sheetId) return;
+    setIsPublishing(true);
+    setPublishError(null);
+    try {
+      await unpublishSheet(sheetId);
+      await queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId) });
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Unpublish failed");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleCopyLink = (token: string) => {
+    const url = `${window.location.origin}/share/${token}`;
+    void navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
   };
 
   const { data: sheet, isPending, isError, error, refetch, isFetching } = useQuery({
@@ -188,7 +227,70 @@ export default function SheetDetail() {
       </Button>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground">{sheet.name}</h2>
-      <p className="mb-6 text-sm text-muted-foreground">{sheet.client.name}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{sheet.client.name}</p>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {sheet.is_published ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => handleCopyLink(sheet.share_token)}
+              disabled={isPublishing}
+            >
+              {linkCopied ? (
+                <><Check className="size-4 text-green-600" aria-hidden />Copied!</>
+              ) : (
+                <><Copy className="size-4" aria-hidden />Copy link</>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void handlePublish()}
+              disabled={isPublishing}
+            >
+              {isPublishing ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Globe className="size-4" aria-hidden />}
+              Re-publish
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-destructive"
+              onClick={() => void handleUnpublish()}
+              disabled={isPublishing}
+            >
+              <GlobeLock className="size-4" aria-hidden />
+              Unpublish
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => void handlePublish()}
+            disabled={isPublishing || sheet.sprints.length === 0}
+          >
+            {isPublishing ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Globe className="size-4" aria-hidden />}
+            Publish
+          </Button>
+        )}
+        {publishError ? (
+          <span className="text-xs text-destructive">{publishError}</span>
+        ) : null}
+        {sheet.is_published && sheet.published_at ? (
+          <span className="text-xs text-muted-foreground">
+            Published {new Date(sheet.published_at).toLocaleDateString()}
+          </span>
+        ) : null}
+      </div>
 
       <section className="mb-8">
         <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">

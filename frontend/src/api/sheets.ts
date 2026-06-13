@@ -3,6 +3,7 @@ import { apiFetch } from "./apiFetch";
 import type {
   CreateSheetPayload,
   CreateSprintPayload,
+  PublicSheetSnapshot,
   Sheet,
   SheetDetail,
   SprintConversationMessage,
@@ -199,6 +200,46 @@ export async function sendSprintConversationMessage(
     throw new Error(message);
   }
   return res.json() as Promise<SprintConversationMessage[]>;
+}
+
+export async function publishSheet(sheetId: number): Promise<SheetDetail> {
+  const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/publish/`, { method: "POST" });
+  if (!res.ok) throw new Error(`Failed to publish sheet (${res.status})`);
+  return res.json() as Promise<SheetDetail>;
+}
+
+export async function unpublishSheet(sheetId: number): Promise<SheetDetail> {
+  const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/unpublish/`, { method: "POST" });
+  if (!res.ok) throw new Error(`Failed to unpublish sheet (${res.status})`);
+  return res.json() as Promise<SheetDetail>;
+}
+
+export async function fetchPublicSheet(token: string): Promise<PublicSheetSnapshot> {
+  const res = await fetch(`${API_BASE}/public/share/${token}/`);
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json() as Promise<PublicSheetSnapshot>;
+}
+
+export async function exportPublicSheetExcel(token: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/public/share/${token}/export/`);
+  if (!res.ok) throw new Error(`Failed to export (${res.status})`);
+
+  const blob = await res.blob();
+  const contentDisposition = res.headers.get("Content-Disposition");
+  let filename = "sprints.xlsx";
+  if (contentDisposition) {
+    const match = /filename="?([^"]+)"?/.exec(contentDisposition);
+    if (match?.[1]) filename = match[1];
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export async function exportSheetExcel(sheetId: number): Promise<void> {

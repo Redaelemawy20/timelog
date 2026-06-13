@@ -12,6 +12,7 @@ import { dashboardKeys } from "./lib/dashboardQueryKeys";
 import ClientsPage from "./pages/ClientsPage";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
+import SharePage from "./pages/SharePage";
 import SheetDetail from "./pages/SheetDetail";
 import SheetsPage from "./pages/SheetsPage";
 
@@ -90,6 +91,7 @@ function AppLayout() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/share/:token" element={<SharePage />} />
       <Route
         path="/login"
         element={

@@ -138,7 +138,11 @@ class SheetDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sheet
-        fields = ["id", "name", "client", "created_at", "updated_at", "repos", "sprints"]
+        fields = [
+            "id", "name", "client", "created_at", "updated_at",
+            "repos", "sprints",
+            "share_token", "is_published", "published_at",
+        ]
 
 
 class RepoRefSerializer(serializers.Serializer):

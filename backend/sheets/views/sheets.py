@@ -13,6 +13,7 @@ from ..serializers import (
     SheetUpdateSerializer,
 )
 from ..services.excel_export import build_sheet_export
+from ..services.publish import publish_sheet, unpublish_sheet
 
 
 @api_view(["GET", "POST"])
@@ -43,6 +44,20 @@ def api_sheet_detail(request: Request, sheet_id: int) -> Response:
     sheet = update.save()
     sheet = Sheet.objects.select_related("client").get(pk=sheet.pk)
     return Response(SheetListSerializer(sheet).data)
+
+
+@api_view(["POST"])
+def api_sheet_publish(request: Request, sheet_id: int) -> Response:
+    sheet = get_object_or_404(Sheet.objects.select_related("client").prefetch_related("sprints__sprint_repos__sheet_repo"), pk=sheet_id)
+    sheet = publish_sheet(sheet)
+    return Response(SheetDetailSerializer(sheet).data)
+
+
+@api_view(["POST"])
+def api_sheet_unpublish(request: Request, sheet_id: int) -> Response:
+    sheet = get_object_or_404(Sheet.objects.select_related("client"), pk=sheet_id)
+    sheet = unpublish_sheet(sheet)
+    return Response(SheetDetailSerializer(sheet).data)
 
 
 @api_view(["GET"])

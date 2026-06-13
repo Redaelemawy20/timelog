@@ -74,6 +74,25 @@ export interface SheetSummary extends Sheet {
 export interface SheetDetail extends Sheet {
   repos: SheetRepo[];
   sprints: Sprint[];
+  share_token: string;
+  is_published: boolean;
+  published_at: string | null;
+}
+
+export interface PublicSprintSnapshot {
+  range_start: string;
+  range_end: string;
+  summary: string;
+  time_hours: string | null;
+  projects: string[];
+}
+
+export interface PublicSheetSnapshot {
+  sheet_name: string;
+  client_name: string;
+  published_at: string;
+  total_hours: number;
+  sprints: PublicSprintSnapshot[];
 }
 
 export interface CreateSprintRepoRef {
