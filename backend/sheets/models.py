@@ -5,6 +5,7 @@ from django.db import models
 
 class Client(models.Model):
     name = models.CharField(max_length=255)
+    remaining_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -19,6 +20,7 @@ class Client(models.Model):
 class Sheet(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="sheets")
     name = models.CharField(max_length=255)
+    include_previous_hours = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)

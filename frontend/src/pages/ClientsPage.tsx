@@ -34,7 +34,8 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
   };
 
   const renameMutation = useMutation({
-    mutationFn: ({ id, name }: { id: number; name: string }) => updateClient(id, name),
+    mutationFn: ({ id, name, remaining_hours }: { id: number; name: string; remaining_hours: number }) =>
+      updateClient(id, { name, remaining_hours }),
     onSuccess: () => {
       invalidateAll();
       setRenameTarget(null);
@@ -52,14 +53,14 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
 
   const clients = clientsQuery.data ?? [];
 
-  const handleRenameSubmit = (name: string) => {
+  const handleRenameSubmit = ({ name, remaining_hours }: { name: string; remaining_hours: number }) => {
     if (!renameTarget) return;
     if (!name) {
       setDialogError("Enter a client name.");
       return;
     }
     setDialogError(null);
-    renameMutation.mutate({ id: renameTarget.id, name });
+    renameMutation.mutate({ id: renameTarget.id, name, remaining_hours });
   };
 
   const handleDelete = (client: Client) => {
@@ -126,6 +127,8 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
               <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Sheets</th>
+                <th className="px-4 py-3 font-medium text-right">Remaining</th>
+                <th className="px-4 py-3 font-medium text-right">Worked</th>
                 <th className="px-4 py-3 font-medium">Updated</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
@@ -135,6 +138,12 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
                 <tr key={client.id} className="border-b border-border/60 last:border-0">
                   <td className="px-4 py-3 font-medium text-foreground">{client.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{client.sheet_count ?? 0}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    {parseFloat(client.remaining_hours || "0")}h
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    {client.total_worked_hours}h
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                     {new Date(client.updated_at).toLocaleDateString(undefined, {
                       dateStyle: "medium",
@@ -170,9 +179,10 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
 
       <ClientNameDialog
         open={renameTarget !== null}
-        title="Rename client"
-        description="Update the client or company name."
+        title="Edit client"
+        description="Update the client name and remaining hours."
         initialName={renameTarget?.name ?? ""}
+        initialRemainingHours={parseFloat(renameTarget?.remaining_hours || "0")}
         submitLabel="Save"
         submitting={renameMutation.isPending}
         error={dialogError}

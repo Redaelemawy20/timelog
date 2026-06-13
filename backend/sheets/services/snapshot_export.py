@@ -5,7 +5,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 
-def build_snapshot_export(snapshot: dict) -> tuple[BytesIO, str]:
+def build_snapshot_export(
+    snapshot: dict,
+    *,
+    include_previous_hours: bool,
+    previous_hours: float = 0,
+) -> tuple[BytesIO, str]:
     sprints = snapshot.get("sprints", [])
 
     wb = Workbook()
@@ -74,26 +79,27 @@ def build_snapshot_export(snapshot: dict) -> tuple[BytesIO, str]:
     ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
     ws[f"C{current_row}"].font = summary_font
 
-    current_row += 1
-    ws.append(["", "", "", 0, ""])
-    ws[f"D{current_row}"].fill = summary_fill
-    ws[f"D{current_row}"].font = summary_font
-    ws[f"D{current_row}"].alignment = center_alignment
-    ws[f"C{current_row}"] = "Previous"
-    ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
-    ws[f"C{current_row}"].font = summary_font
+    if include_previous_hours:
+        current_row += 1
+        ws.append(["", "", "", previous_hours, ""])
+        ws[f"D{current_row}"].fill = summary_fill
+        ws[f"D{current_row}"].font = summary_font
+        ws[f"D{current_row}"].alignment = center_alignment
+        ws[f"C{current_row}"] = "Previous"
+        ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
+        ws[f"C{current_row}"].font = summary_font
 
-    current_row += 1
-    sum_row = current_row - 2
-    previous_row = current_row - 1
-    total_formula = f"=D{sum_row}+D{previous_row}"
-    ws.append(["", "", "", total_formula, ""])
-    ws[f"D{current_row}"].fill = summary_fill
-    ws[f"D{current_row}"].font = summary_font
-    ws[f"D{current_row}"].alignment = center_alignment
-    ws[f"C{current_row}"] = "Total"
-    ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
-    ws[f"C{current_row}"].font = summary_font
+        current_row += 1
+        sum_row = current_row - 2
+        previous_row = current_row - 1
+        total_formula = f"=D{sum_row}+D{previous_row}"
+        ws.append(["", "", "", total_formula, ""])
+        ws[f"D{current_row}"].fill = summary_fill
+        ws[f"D{current_row}"].font = summary_font
+        ws[f"D{current_row}"].alignment = center_alignment
+        ws[f"C{current_row}"] = "Total"
+        ws[f"C{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
+        ws[f"C{current_row}"].font = summary_font
 
     buffer = BytesIO()
     wb.save(buffer)

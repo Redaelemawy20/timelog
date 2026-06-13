@@ -36,13 +36,13 @@ function AppLayout() {
     },
   });
 
-  const handleAddClient = (name: string) => {
+  const handleAddClient = ({ name, remaining_hours }: { name: string; remaining_hours: number }) => {
     if (!name) {
       setAddClientError("Enter a client name.");
       return;
     }
     setAddClientError(null);
-    addClientMutation.mutate(name);
+    addClientMutation.mutate({ name, remaining_hours });
   };
 
   return (

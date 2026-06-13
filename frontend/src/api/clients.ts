@@ -9,10 +9,10 @@ export async function fetchClients(signal?: AbortSignal): Promise<Client[]> {
   return res.json() as Promise<Client[]>;
 }
 
-export async function createClient(name: string): Promise<Client> {
+export async function createClient(data: { name: string; remaining_hours?: number }): Promise<Client> {
   const res = await apiFetch(`${API_BASE}/clients/`, {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(data),
   });
   if (!res.ok) {
     let message = `Failed to create client (${res.status})`;
@@ -33,10 +33,10 @@ export async function createClient(name: string): Promise<Client> {
   return res.json() as Promise<Client>;
 }
 
-export async function updateClient(id: number, name: string): Promise<Client> {
+export async function updateClient(id: number, data: { name?: string; remaining_hours?: number }): Promise<Client> {
   const res = await apiFetch(`${API_BASE}/clients/${id}/`, {
     method: "PATCH",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(data),
   });
   if (!res.ok) {
     let message = `Failed to update client (${res.status})`;

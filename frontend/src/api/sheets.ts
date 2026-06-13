@@ -3,7 +3,7 @@ import { apiFetch } from "./apiFetch";
 import type {
   CreateSheetPayload,
   CreateSprintPayload,
-  PublicSheetSnapshot,
+  PublicSheetResponse,
   Sheet,
   SheetDetail,
   SprintConversationMessage,
@@ -214,10 +214,10 @@ export async function unpublishSheet(sheetId: number): Promise<SheetDetail> {
   return res.json() as Promise<SheetDetail>;
 }
 
-export async function fetchPublicSheet(token: string): Promise<PublicSheetSnapshot> {
+export async function fetchPublicSheet(token: string): Promise<PublicSheetResponse> {
   const res = await fetch(`${API_BASE}/public/share/${token}/`);
   if (!res.ok) throw new Error(`${res.status}`);
-  return res.json() as Promise<PublicSheetSnapshot>;
+  return res.json() as Promise<PublicSheetResponse>;
 }
 
 export async function exportPublicSheetExcel(token: string): Promise<void> {

@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -19,7 +20,9 @@ from ..services.publish import publish_sheet, unpublish_sheet
 @api_view(["GET", "POST"])
 def api_sheet_list(request: Request) -> Response:
     if request.method == "GET":
-        sheets = Sheet.objects.select_related("client").all()
+        sheets = Sheet.objects.select_related("client").annotate(
+            _total_worked_hours=Sum("sprints__time_hours")
+        ).all()
         return Response(SheetListSerializer(sheets, many=True).data)
 
     create = SheetCreateSerializer(data=request.data)
@@ -62,7 +65,7 @@ def api_sheet_unpublish(request: Request, sheet_id: int) -> Response:
 
 @api_view(["GET"])
 def api_sheet_export_excel(request: Request, sheet_id: int) -> FileResponse:
-    sheet = get_object_or_404(Sheet, pk=sheet_id)
+    sheet = get_object_or_404(Sheet.objects.select_related("client"), pk=sheet_id)
     buffer, filename = build_sheet_export(sheet)
     return FileResponse(
         buffer,

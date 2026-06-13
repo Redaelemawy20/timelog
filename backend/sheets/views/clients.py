@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -12,7 +12,10 @@ from ..serializers import ClientCreateSerializer, ClientSerializer, ClientUpdate
 @api_view(["GET", "POST"])
 def api_client_list(request: Request) -> Response:
     if request.method == "GET":
-        clients = Client.objects.annotate(sheet_count=Count("sheets")).all()
+        clients = Client.objects.annotate(
+            sheet_count=Count("sheets", distinct=True),
+            _total_worked_hours=Sum("sheets__sprints__time_hours"),
+        ).all()
         return Response(ClientSerializer(clients, many=True).data)
 
     create = ClientCreateSerializer(data=request.data)

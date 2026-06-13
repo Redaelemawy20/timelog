@@ -58,7 +58,7 @@ export default function SharePage() {
   const { token } = useParams<{ token: string }>();
   const [isExporting, setIsExporting] = useState(false);
 
-  const { data: snapshot, isPending, isError } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ["public-share", token],
     queryFn: () => fetchPublicSheet(token!),
     enabled: !!token,
@@ -83,7 +83,7 @@ export default function SharePage() {
     );
   }
 
-  if (isError || !snapshot) {
+  if (isError || !data) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-3 text-center px-4">
         <FileText className="size-10 text-slate-300" />
@@ -93,13 +93,15 @@ export default function SharePage() {
     );
   }
 
+  const { snapshot, include_previous_hours, remaining_hours } = data;
   const totalHours = formatHours(
     snapshot.total_hours ? String(snapshot.total_hours) : null
   );
+  const previousHours = parseFloat(remaining_hours || "0");
+  const grandTotal = snapshot.total_hours + previousHours;
 
   return (
     <div className="min-h-screen bg-slate-50 print:bg-white">
-      {/* Header */}
       <div className="bg-white border-b print:border-slate-200 print:shadow-none shadow-sm">
         <div className="mx-auto max-w-3xl px-6 py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -110,13 +112,21 @@ export default function SharePage() {
                 Published {new Date(snapshot.published_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
               </p>
             </div>
-            <div className="text-right shrink-0">
-              <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Total hours</p>
-              <p className="text-3xl font-bold text-slate-800">{totalHours}</p>
+            <div className="text-right shrink-0 space-y-1">
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Worked</p>
+                <p className="text-3xl font-bold text-slate-800">{totalHours}</p>
+              </div>
+              {include_previous_hours && (
+                <div className="text-xs text-slate-500">
+                  <span className="text-slate-400">Previous:</span> {formatHours(String(previousHours))}
+                  <span className="mx-1 text-slate-300">·</span>
+                  <span className="font-semibold text-slate-700">Total: {formatHours(String(grandTotal))}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Action buttons — hidden in print */}
           <div className="mt-4 flex flex-wrap gap-2 print:hidden">
             <button
               type="button"
@@ -139,7 +149,6 @@ export default function SharePage() {
         </div>
       </div>
 
-      {/* Sprint list */}
       <main className="mx-auto max-w-3xl px-6 py-8 print:px-0 print:py-4">
         {snapshot.sprints.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-16">No sprints in this sheet.</p>
@@ -152,7 +161,6 @@ export default function SharePage() {
         )}
       </main>
 
-      {/* Print footer */}
       <div className="hidden print:block fixed bottom-0 left-0 right-0 text-center text-xs text-slate-400 pb-4">
         {snapshot.sheet_name} · {snapshot.client_name}
       </div>

@@ -1,6 +1,8 @@
 export interface Client {
   id: number;
   name: string;
+  remaining_hours: string;
+  total_worked_hours: number;
   sheet_count?: number;
   created_at: string;
   updated_at: string;
@@ -50,6 +52,8 @@ export interface Sheet {
   id: number;
   name: string;
   client: Client;
+  include_previous_hours: boolean;
+  total_worked_hours: number;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +66,7 @@ export interface CreateSheetPayload {
 export interface UpdateSheetPayload {
   name?: string;
   client_id?: number;
+  include_previous_hours?: boolean;
 }
 
 /** Home list row: base sheet plus quick stats for scanning. */
@@ -93,6 +98,12 @@ export interface PublicSheetSnapshot {
   published_at: string;
   total_hours: number;
   sprints: PublicSprintSnapshot[];
+}
+
+export interface PublicSheetResponse {
+  snapshot: PublicSheetSnapshot;
+  include_previous_hours: boolean;
+  remaining_hours: string;
 }
 
 export interface CreateSprintRepoRef {

@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import serializers
 
 from .models import Client, Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
@@ -7,10 +8,11 @@ MAX_REPOS_PER_SPRINT = 3
 
 class ClientSerializer(serializers.ModelSerializer):
     sheet_count = serializers.SerializerMethodField()
+    total_worked_hours = serializers.SerializerMethodField()
 
     class Meta:
         model = Client
-        fields = ["id", "name", "sheet_count", "created_at", "updated_at"]
+        fields = ["id", "name", "remaining_hours", "total_worked_hours", "sheet_count", "created_at", "updated_at"]
 
     def get_sheet_count(self, obj: Client) -> int:
         annotated = getattr(obj, "sheet_count", None)
@@ -18,11 +20,21 @@ class ClientSerializer(serializers.ModelSerializer):
             return annotated
         return obj.sheets.count()
 
+    def get_total_worked_hours(self, obj: Client) -> float:
+        annotated = getattr(obj, "_total_worked_hours", None)
+        if annotated is not None:
+            return float(annotated) if annotated else 0.0
+        from .models import Sprint
+        return float(
+            Sprint.objects.filter(sheet__client=obj).aggregate(total=models.Sum("time_hours"))["total"] or 0
+        )
+
 
 class ClientCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = ["name"]
+        fields = ["name", "remaining_hours"]
+        extra_kwargs = {"remaining_hours": {"required": False}}
 
     def validate_name(self, value: str) -> str:
         cleaned = value.strip()
@@ -34,7 +46,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
 class ClientUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = ["name"]
+        fields = ["name", "remaining_hours"]
 
     def validate_name(self, value: str) -> str:
         cleaned = value.strip()
@@ -84,10 +96,17 @@ class SprintSerializer(serializers.ModelSerializer):
 
 class SheetListSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
+    total_worked_hours = serializers.SerializerMethodField()
 
     class Meta:
         model = Sheet
-        fields = ["id", "name", "client", "created_at", "updated_at"]
+        fields = ["id", "name", "client", "include_previous_hours", "total_worked_hours", "created_at", "updated_at"]
+
+    def get_total_worked_hours(self, obj: Sheet) -> float:
+        annotated = getattr(obj, "_total_worked_hours", None)
+        if annotated is not None:
+            return float(annotated) if annotated else 0.0
+        return float(obj.sprints.aggregate(total=models.Sum("time_hours"))["total"] or 0)
 
 
 class SheetCreateSerializer(serializers.ModelSerializer):
@@ -116,7 +135,7 @@ class SheetUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sheet
-        fields = ["name", "client_id"]
+        fields = ["name", "client_id", "include_previous_hours"]
 
     def validate_name(self, value: str) -> str:
         cleaned = value.strip()
@@ -134,14 +153,18 @@ class SheetDetailSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     repos = SheetRepoSerializer(many=True, read_only=True)
     sprints = SprintSerializer(many=True, read_only=True)
+    total_worked_hours = serializers.SerializerMethodField()
 
     class Meta:
         model = Sheet
         fields = [
-            "id", "name", "client", "created_at", "updated_at",
+            "id", "name", "client", "include_previous_hours", "total_worked_hours", "created_at", "updated_at",
             "repos", "sprints",
             "share_token", "is_published", "published_at", "published_snapshot",
         ]
+
+    def get_total_worked_hours(self, obj: Sheet) -> float:
+        return float(obj.sprints.aggregate(total=models.Sum("time_hours"))["total"] or 0)
 
 
 class RepoRefSerializer(serializers.Serializer):

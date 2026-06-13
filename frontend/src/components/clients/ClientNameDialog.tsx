@@ -15,11 +15,12 @@ interface ClientNameDialogProps {
   title: string;
   description: string;
   initialName?: string;
+  initialRemainingHours?: number;
   submitLabel: string;
   submitting?: boolean;
   error?: string | null;
   onClose: () => void;
-  onSubmit: (name: string) => void;
+  onSubmit: (data: { name: string; remaining_hours: number }) => void;
 }
 
 export function ClientNameDialog({
@@ -27,6 +28,7 @@ export function ClientNameDialog({
   title,
   description,
   initialName = "",
+  initialRemainingHours = 0,
   submitLabel,
   submitting = false,
   error = null,
@@ -35,16 +37,18 @@ export function ClientNameDialog({
 }: ClientNameDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initialName);
+  const [remainingHours, setRemainingHours] = useState(String(initialRemainingHours));
 
   useEffect(() => {
     if (!open) return;
     setName(initialName);
+    setRemainingHours(String(initialRemainingHours));
     queueMicrotask(() => inputRef.current?.focus());
-  }, [open, initialName]);
+  }, [open, initialName, initialRemainingHours]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit(name.trim());
+    onSubmit({ name: name.trim(), remaining_hours: parseFloat(remainingHours) || 0 });
   };
 
   return (
@@ -71,6 +75,19 @@ export function ClientNameDialog({
               autoComplete="off"
               disabled={submitting}
               placeholder="e.g. Acme Corp"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="client-remaining-hours">Remaining hours (unpaid)</Label>
+            <Input
+              id="client-remaining-hours"
+              type="number"
+              step="0.5"
+              min="0"
+              value={remainingHours}
+              onChange={(e) => setRemainingHours(e.target.value)}
+              disabled={submitting}
+              placeholder="0"
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}

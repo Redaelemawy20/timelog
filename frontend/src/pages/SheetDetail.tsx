@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSprint, deleteSprint, exportSheetExcel, fetchSheet, publishSheet, unpublishSheet, updateSprint } from "../api/sheets";
+import { createSprint, deleteSprint, exportSheetExcel, fetchSheet, publishSheet, unpublishSheet, updateSheet, updateSprint } from "../api/sheets";
 import { AddSprintDialog } from "../components/sheet/AddSprintDialog";
 import { SheetShareBar } from "../components/sheet/SheetShareBar";
 import { SprintCard } from "../components/sheet/SprintCard";
 import { SprintChatPanel } from "../components/sheet/SprintChatPanel";
 import { SprintDetailDialog } from "../components/sheet/SprintDetailDialog";
 import { sheetKeys } from "../lib/sheetQueryKeys";
+import { cn } from "../lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -32,6 +33,13 @@ export default function SheetDetail() {
   const [isToggling, setIsToggling] = useState(false);
   const [isRepublishing, setIsRepublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+
+  const togglePreviousHours = useMutation({
+    mutationFn: (include: boolean) => updateSheet(sheetId!, { include_previous_hours: include }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: sheetKeys.detail(sheetId!) });
+    },
+  });
 
   if (sheetId === null) {
     return (
@@ -264,6 +272,30 @@ export default function SheetDetail() {
             Sprints
           </h3>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sheet.include_previous_hours}
+              aria-label="Include remaining hours in exports"
+              disabled={togglePreviousHours.isPending}
+              onClick={() => togglePreviousHours.mutate(!sheet.include_previous_hours)}
+              className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span
+                className={cn(
+                  "relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors",
+                  sheet.include_previous_hours ? "bg-primary" : "bg-muted-foreground/30",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 size-3 rounded-full bg-white shadow-sm transition-transform",
+                    sheet.include_previous_hours ? "translate-x-3.5" : "translate-x-0.5",
+                  )}
+                />
+              </span>
+              Include remaining hours
+            </button>
             <Button
               type="button"
               variant="outline"
