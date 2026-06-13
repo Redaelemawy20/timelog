@@ -23,7 +23,7 @@ class SheetRepoAdmin(admin.ModelAdmin):
 
 @admin.register(Sprint)
 class SprintAdmin(admin.ModelAdmin):
-    list_display = ("sheet", "range_start", "range_end", "status", "created_at")
+    list_display = ("sheet", "range_start", "range_end", "created_at")
 
 
 @admin.register(SprintRepo)

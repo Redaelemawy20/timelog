@@ -75,7 +75,6 @@ class SprintSerializer(serializers.ModelSerializer):
             "id",
             "range_start",
             "range_end",
-            "status",
             "summary",
             "time_hours",
             "created_at",
@@ -141,7 +140,7 @@ class SheetDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "client", "created_at", "updated_at",
             "repos", "sprints",
-            "share_token", "is_published", "published_at",
+            "share_token", "is_published", "published_at", "published_snapshot",
         ]
 
 

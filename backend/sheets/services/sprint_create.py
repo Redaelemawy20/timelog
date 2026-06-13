@@ -78,7 +78,6 @@ def create_sprint(
             sheet=sheet,
             range_start=range_start,
             range_end=range_end,
-            status=Sprint.Status.DRAFT,
             summary="",
             time_hours=None,
         )

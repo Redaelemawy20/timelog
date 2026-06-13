@@ -210,16 +210,6 @@ export function SprintCard({
               <Trash2 className="size-3.5" aria-hidden />
               Delete
             </Button>
-            <Badge
-              variant="outline"
-              className={
-                sprint.status === "saved"
-                  ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
-                  : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-              }
-            >
-              {sprint.status}
-            </Badge>
           </div>
         </div>
         <div className="overflow-x-auto rounded-md border border-border">

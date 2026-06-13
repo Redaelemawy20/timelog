@@ -40,7 +40,6 @@ export interface Sprint {
   id: number;
   range_start: string;
   range_end: string;
-  status: "draft" | "saved";
   summary: string;
   time_hours: string | null;
   created_at: string;
@@ -77,6 +76,7 @@ export interface SheetDetail extends Sheet {
   share_token: string;
   is_published: boolean;
   published_at: string | null;
+  published_snapshot: PublicSheetSnapshot | null;
 }
 
 export interface PublicSprintSnapshot {

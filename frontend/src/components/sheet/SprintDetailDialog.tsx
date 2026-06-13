@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Sprint, SprintRepo, StoredCommit } from "../../types/sheet";
 
@@ -63,20 +62,8 @@ export function SprintDetailDialog({ open, onClose, sheetName, sprint }: Props) 
             <DialogDescription className="space-y-2 text-left">
               <span className="block font-medium text-foreground">{sheetName}</span>
               {sprint ? (
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground">
-                    {sprint.range_start} to {sprint.range_end}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className={
-                      sprint.status === "saved"
-                        ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/50 dark:text-green-200"
-                        : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-                    }
-                  >
-                    {sprint.status}
-                  </Badge>
+                <span className="text-muted-foreground">
+                  {sprint.range_start} to {sprint.range_end}
                 </span>
               ) : null}
             </DialogDescription>
