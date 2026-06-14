@@ -50,7 +50,7 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
   const clients = clientsQuery.isSuccess ? (clientsQuery.data ?? []) : [];
 
   const saveClientMutation = useMutation({
-    mutationFn: (clientName: string) => createClient(clientName),
+    mutationFn: (clientName: string) => createClient({ name: clientName }),
     onSuccess: (client) => {
       setClientId(String(client.id));
       setAddClientOpen(false);
