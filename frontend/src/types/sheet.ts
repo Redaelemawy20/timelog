@@ -110,7 +110,7 @@ export interface CreateSprintRepoRef {
   owner: string;
   name: string;
   display_name?: string | null;
-  default_branch?: string | null;
+  branches: string[];
 }
 
 export interface CreateSprintPayload {

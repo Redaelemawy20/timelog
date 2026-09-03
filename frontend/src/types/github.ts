@@ -17,3 +17,8 @@ export interface GithubRepo {
   default_branch: string;
   updated_at: string;
 }
+
+export interface GithubBranch {
+  name: string;
+  protected: boolean;
+}

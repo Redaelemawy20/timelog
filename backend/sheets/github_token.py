@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
@@ -157,11 +157,88 @@ def fetch_github_user_repos(
 
 
 @dataclass(frozen=True)
+class RepoBranchesResult:
+    ok: bool
+    branches: list[dict[str, Any]] | None = None
+    error: str | None = None
+    http_status: int | None = None
+
+
+def fetch_github_repo_branches(
+    token: str,
+    owner: str,
+    repo: str,
+    *,
+    per_page: int = 100,
+    max_pages: int = 10,
+) -> RepoBranchesResult:
+    if per_page < 1 or per_page > 100:
+        per_page = 100
+    owner_q = quote(owner, safe="")
+    repo_q = quote(repo, safe="")
+    base = f"https://api.github.com/repos/{owner_q}/{repo_q}/branches"
+    all_branches: list[dict[str, Any]] = []
+    for page in range(1, max_pages + 1):
+        query = urlencode({"per_page": per_page, "page": page})
+        request = Request(f"{base}?{query}", headers=_github_auth_headers(token))
+        try:
+            with urlopen(request, timeout=30) as response:
+                raw = response.read().decode("utf-8")
+        except HTTPError as exc:
+            try:
+                body = exc.read().decode("utf-8", errors="replace")
+                detail = json.loads(body).get("message") if body else None
+            except Exception:
+                detail = None
+            msg = detail or f"GitHub API error: {exc.code}"
+            return RepoBranchesResult(ok=False, error=msg, http_status=exc.code)
+        except URLError as exc:
+            return RepoBranchesResult(ok=False, error=f"Network error: {exc.reason}")
+        except Exception as exc:  # pragma: no cover
+            return RepoBranchesResult(ok=False, error=f"Unexpected error: {exc}")
+
+        try:
+            batch = json.loads(raw)
+        except json.JSONDecodeError:
+            return RepoBranchesResult(ok=False, error="Invalid JSON from GitHub.")
+
+        if not isinstance(batch, list):
+            return RepoBranchesResult(ok=False, error="Unexpected response shape from GitHub.")
+
+        if not batch:
+            break
+
+        for item in batch:
+            if not isinstance(item, dict):
+                continue
+            name = item.get("name")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            all_branches.append({"name": name.strip(), "protected": item.get("protected") is True})
+
+        if len(batch) < per_page:
+            break
+
+    return RepoBranchesResult(ok=True, branches=all_branches)
+
+
+@dataclass(frozen=True)
 class CommitsFetchResult:
     ok: bool
     commits: list[dict[str, Any]] | None = None
     error: str | None = None
     http_status: int | None = None
+
+
+def _commit_range_query_times(range_start: date, range_end: date) -> tuple[str, str]:
+    since = datetime(range_start.year, range_start.month, range_start.day, tzinfo=timezone.utc)
+    until = datetime(range_end.year, range_end.month, range_end.day, tzinfo=timezone.utc) + timedelta(
+        days=1
+    )
+    return (
+        since.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        until.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
 
 
 def _parse_commit_datetime(item: dict[str, Any]) -> datetime | None:
@@ -202,17 +279,17 @@ def fetch_commits_for_range(
     owner_q = quote(owner, safe="")
     repo_q = quote(repo, safe="")
     base = f"https://api.github.com/repos/{owner_q}/{repo_q}/commits"
+    since, until = _commit_range_query_times(range_start, range_end)
 
     slim: list[dict[str, Any]] = []
     seen_sha: set[str] = set()
-    stop_all_pages = False
 
     for page in range(1, max_pages + 1):
-        if stop_all_pages:
-            break
         query = urlencode(
             {
                 "sha": branch,
+                "since": since,
+                "until": until,
                 "per_page": per_page,
                 "page": page,
             }
@@ -269,12 +346,6 @@ def fetch_commits_for_range(
             dt = _parse_commit_datetime(item)
             if dt is None:
                 continue
-            day = dt.astimezone(timezone.utc).date()
-            if day > range_end:
-                continue
-            if day < range_start:
-                stop_all_pages = True
-                break
             seen_sha.add(sha)
             slim.append(
                 {

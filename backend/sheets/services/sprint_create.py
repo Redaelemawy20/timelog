@@ -6,7 +6,9 @@ from django.db import transaction
 
 from ..github_token import CommitsFetchResult, fetch_commits_for_range
 from ..models import Sheet, SheetRepo, Sprint, SprintRepo
+from .commit_merge import format_commit_messages, merge_commits_by_sha
 from .github_http import http_status_for_github_code
+from .repo_branches import branches_from_repo_spec
 
 
 @dataclass
@@ -31,26 +33,24 @@ def _repo_display_name(spec: dict[str, Any]) -> str:
     return f"{owner}/{name}"
 
 
-def _repo_branch(spec: dict[str, Any]) -> str:
-    branch_raw = spec.get("default_branch")
-    if isinstance(branch_raw, str) and branch_raw.strip():
-        return branch_raw.strip()
-    return "main"
-
-
 def _fetch_repo_commits(
     token: str,
     spec: dict[str, Any],
     range_start: date,
     range_end: date,
-) -> CommitsFetchResult | list[dict]:
+) -> CommitsFetchResult | list[dict[str, Any]]:
     owner = spec["owner"]
     name = spec["name"]
-    branch = _repo_branch(spec)
-    listed = fetch_commits_for_range(token, owner, name, branch, range_start, range_end)
-    if not listed.ok:
-        return listed
-    return listed.commits or []
+    branches = branches_from_repo_spec(spec)
+    batches: list[list[dict[str, Any]]] = []
+
+    for branch in branches:
+        listed = fetch_commits_for_range(token, owner, name, branch, range_start, range_end)
+        if not listed.ok:
+            return listed
+        batches.append(listed.commits or [])
+
+    return merge_commits_by_sha(batches)
 
 
 def create_sprint(
@@ -60,7 +60,7 @@ def create_sprint(
     repo_specs: list[dict[str, Any]],
     token: str,
 ) -> SprintCreateResult:
-    prepared: list[tuple[str, str, str, list[dict]]] = []
+    prepared: list[tuple[str, str, str, list[dict[str, Any]]]] = []
     for spec in repo_specs:
         owner = spec["owner"]
         name = spec["name"]
@@ -88,16 +88,13 @@ def create_sprint(
                 name=name,
                 defaults={"display_name": display_name},
             )
-            messages_joined = "\n\n".join(
-                c["message"] for c in commits if isinstance(c.get("message"), str) and c["message"]
-            )
             SprintRepo.objects.create(
                 sheet=sheet,
                 sprint=sprint,
                 sheet_repo=sheet_repo,
                 project=name,
                 notes=None,
-                commit_messages=messages_joined,
+                commit_messages=format_commit_messages(commits),
                 raw_commits_json=commits,
             )
 

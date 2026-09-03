@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { fetchGithubRepos } from "../../api/github";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { fetchGithubRepoBranches, fetchGithubRepos } from "../../api/github";
 import { addSprintDraftSchema, MAX_REPOS_PER_SPRINT } from "../../lib/addSprintSchema";
 import type { CreateSprintPayload } from "../../types/sheet";
+import { RepoBranchPicker } from "./RepoBranchPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,11 @@ interface AddSprintDialogProps {
   submitError?: string | null;
 }
 
+function defaultBranchesForRepo(defaultBranch: string, available: string[]): string[] {
+  if (available.includes(defaultBranch)) return [defaultBranch];
+  return available.length > 0 ? [available[0]] : [];
+}
+
 export function AddSprintDialog({
   open,
   onClose,
@@ -35,7 +41,9 @@ export function AddSprintDialog({
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [selectedRepoIds, setSelectedRepoIds] = useState<number[]>([]);
+  const [branchesByRepoId, setBranchesByRepoId] = useState<Record<string, string[]>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const initializedBranchReposRef = useRef<Set<number>>(new Set());
 
   const { data: repos, isPending, isError, error } = useQuery({
     queryKey: ["github-repos"],
@@ -44,33 +52,130 @@ export function AddSprintDialog({
     staleTime: 60_000,
   });
 
+  const selectedRepos = useMemo(
+    () => (repos ?? []).filter((repo) => selectedRepoIds.includes(repo.id)),
+    [repos, selectedRepoIds],
+  );
+
+  const branchQueryConfigs = useMemo(
+    () =>
+      selectedRepos.map((repo) => ({
+        queryKey: ["github-branches", repo.owner_login, repo.name] as const,
+        queryFn: () => fetchGithubRepoBranches(repo.owner_login, repo.name),
+        enabled: open,
+        staleTime: 60_000,
+      })),
+    [open, selectedRepos],
+  );
+
+  const branchQueries = useQueries({ queries: branchQueryConfigs });
+
+  const branchStateByRepoId = useMemo(() => {
+    const map = new Map<number, { branches: string[]; isPending: boolean; isError: boolean }>();
+    selectedRepos.forEach((repo, index) => {
+      const query = branchQueries[index];
+      map.set(repo.id, {
+        branches: (query?.data ?? []).map((branch) => branch.name),
+        isPending: Boolean(query?.isPending),
+        isError: Boolean(query?.isError),
+      });
+    });
+    return map;
+  }, [branchQueries, selectedRepos]);
+
+  const branchAvailabilityKey = useMemo(
+    () =>
+      selectedRepos
+        .map((repo) => {
+          const state = branchStateByRepoId.get(repo.id);
+          return `${repo.id}:${state?.isPending ? "pending" : state?.branches.join(",") ?? ""}`;
+        })
+        .join("|"),
+    [branchStateByRepoId, selectedRepos],
+  );
+
   useEffect(() => {
     if (!open) return;
     setRangeStart("");
     setRangeEnd("");
     setSelectedRepoIds([]);
+    setBranchesByRepoId({});
     setFormError(null);
+    initializedBranchReposRef.current = new Set();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !repos?.length || selectedRepoIds.length === 0) return;
+
+    setBranchesByRepoId((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      for (const repoId of selectedRepoIds) {
+        const state = branchStateByRepoId.get(repoId);
+        if (!state || state.isPending || state.isError || state.branches.length === 0) continue;
+
+        const key = String(repoId);
+        const current = next[key] ?? [];
+        const valid = current.filter((branch) => state.branches.includes(branch));
+
+        if (valid.length > 0) {
+          if (valid.length !== current.length) {
+            next[key] = valid;
+            changed = true;
+          }
+          initializedBranchReposRef.current.add(repoId);
+          continue;
+        }
+
+        if (initializedBranchReposRef.current.has(repoId)) continue;
+
+        const repo = repos.find((item) => item.id === repoId);
+        next[key] = defaultBranchesForRepo(repo?.default_branch ?? "main", state.branches);
+        initializedBranchReposRef.current.add(repoId);
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [open, repos, selectedRepoIds, branchAvailabilityKey]);
 
   const isDraftValid = useMemo(
     () =>
       addSprintDraftSchema.safeParse({
         repoIds: selectedRepoIds,
+        branchesByRepoId,
         rangeStart,
         rangeEnd,
       }).success,
-    [selectedRepoIds, rangeStart, rangeEnd],
+    [selectedRepoIds, branchesByRepoId, rangeStart, rangeEnd],
   );
+
+  const branchesLoading = branchQueries.some((query) => query.isPending);
 
   const toggleRepo = (id: number) => {
     setSelectedRepoIds((prev) => {
       if (prev.includes(id)) {
         setFormError(null);
-        return prev.filter((x) => x !== id);
+        initializedBranchReposRef.current.delete(id);
+        setBranchesByRepoId((current) => {
+          const next = { ...current };
+          delete next[String(id)];
+          return next;
+        });
+        return prev.filter((repoId) => repoId !== id);
       }
       if (prev.length >= MAX_REPOS_PER_SPRINT) {
         setFormError(`You can select at most ${MAX_REPOS_PER_SPRINT} repositories.`);
         return prev;
+      }
+      const repo = repos?.find((item) => item.id === id);
+      if (repo) {
+        initializedBranchReposRef.current.delete(id);
+        setBranchesByRepoId((current) => ({
+          ...current,
+          [String(id)]: [repo.default_branch],
+        }));
       }
       setFormError(null);
       return [...prev, id];
@@ -81,6 +186,7 @@ export function AddSprintDialog({
     e.preventDefault();
     const parsed = addSprintDraftSchema.safeParse({
       repoIds: selectedRepoIds,
+      branchesByRepoId,
       rangeStart,
       rangeEnd,
     });
@@ -92,8 +198,8 @@ export function AddSprintDialog({
       setFormError("Repositories are not loaded.");
       return;
     }
-    const selectedRepos = repos.filter((r) => parsed.data.repoIds.includes(r.id));
-    if (selectedRepos.length !== parsed.data.repoIds.length) {
+    const selected = repos.filter((repo) => parsed.data.repoIds.includes(repo.id));
+    if (selected.length !== parsed.data.repoIds.length) {
       setFormError("Could not resolve selected repositories.");
       return;
     }
@@ -101,11 +207,11 @@ export function AddSprintDialog({
     const body: CreateSprintPayload = {
       range_start: parsed.data.rangeStart,
       range_end: parsed.data.rangeEnd,
-      repos: selectedRepos.map((r) => ({
-        owner: r.owner_login,
-        name: r.name,
-        display_name: r.full_name,
-        default_branch: r.default_branch,
+      repos: selected.map((repo) => ({
+        owner: repo.owner_login,
+        name: repo.name,
+        display_name: repo.full_name,
+        branches: parsed.data.branchesByRepoId[String(repo.id)],
       })),
     };
     try {
@@ -115,7 +221,8 @@ export function AddSprintDialog({
     }
   };
 
-  const submitDisabled = isSubmitting || isPending || !!isError || !isDraftValid;
+  const submitDisabled =
+    isSubmitting || isPending || !!isError || branchesLoading || !isDraftValid;
 
   return (
     <Dialog
@@ -129,7 +236,8 @@ export function AddSprintDialog({
           <DialogHeader>
             <DialogTitle>Add sprint</DialogTitle>
             <DialogDescription>
-              Choose up to {MAX_REPOS_PER_SPRINT} repositories and the time range for this sprint.
+              Choose up to {MAX_REPOS_PER_SPRINT} repositories, select one or more branches per
+              repo, and set the time range for this sprint.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -187,6 +295,8 @@ export function AddSprintDialog({
                   <ul className="min-w-0 divide-y divide-border">
                     {repos.map((repo) => {
                       const selected = selectedRepoIds.includes(repo.id);
+                      const branchState = branchStateByRepoId.get(repo.id);
+
                       return (
                         <li key={repo.id}>
                           <button
@@ -227,6 +337,24 @@ export function AddSprintDialog({
                               </Badge>
                             ) : null}
                           </button>
+
+                          {selected ? (
+                            <RepoBranchPicker
+                              repoId={repo.id}
+                              options={branchState?.branches ?? []}
+                              selected={branchesByRepoId[String(repo.id)] ?? []}
+                              isPending={branchState?.isPending ?? false}
+                              isError={branchState?.isError ?? false}
+                              onChange={(branches) => {
+                                initializedBranchReposRef.current.add(repo.id);
+                                setBranchesByRepoId((prev) => ({
+                                  ...prev,
+                                  [String(repo.id)]: branches,
+                                }));
+                                setFormError(null);
+                              }}
+                            />
+                          ) : null}
                         </li>
                       );
                     })}

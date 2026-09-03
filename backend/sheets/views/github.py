@@ -3,7 +3,12 @@ from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from ..github_token import fetch_github_user_repos, read_github_token, verify_github_token
+from ..github_token import (
+    fetch_github_repo_branches,
+    fetch_github_user_repos,
+    read_github_token,
+    verify_github_token,
+)
 from ..services.github_http import http_status_for_github_code
 
 
@@ -42,3 +47,24 @@ def api_github_repos(request: Request) -> Response:
 
     assert listed.repos is not None
     return Response({"repos": listed.repos})
+
+
+@api_view(["GET"])
+def api_github_repo_branches(request: Request, owner: str, repo: str) -> Response:
+    read = read_github_token()
+    if not read.ok:
+        return Response(
+            {"error": read.error},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    assert read.token is not None
+    listed = fetch_github_repo_branches(read.token, owner, repo)
+    if not listed.ok:
+        return Response(
+            {"error": listed.error},
+            status=http_status_for_github_code(listed.http_status),
+        )
+
+    assert listed.branches is not None
+    return Response({"branches": listed.branches})

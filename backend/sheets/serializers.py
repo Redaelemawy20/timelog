@@ -171,6 +171,17 @@ class RepoRefSerializer(serializers.Serializer):
     owner = serializers.CharField(max_length=255)
     name = serializers.CharField(max_length=255)
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
+    branches = serializers.ListField(
+        child=serializers.CharField(max_length=255, allow_blank=False),
+        required=False,
+        allow_empty=False,
+    )
+    branch = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
     default_branch = serializers.CharField(
         max_length=255,
         required=False,
@@ -189,6 +200,31 @@ class RepoRefSerializer(serializers.Serializer):
         if not cleaned:
             raise serializers.ValidationError("Repository name is required.")
         return cleaned
+
+    def validate(self, attrs: dict) -> dict:
+        branches_raw = attrs.get("branches")
+        if isinstance(branches_raw, list):
+            cleaned: list[str] = []
+            seen: set[str] = set()
+            for branch in branches_raw:
+                name = branch.strip()
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                cleaned.append(name)
+            if not cleaned:
+                raise serializers.ValidationError({"branches": "Select at least one branch."})
+            attrs["branches"] = cleaned
+            return attrs
+
+        for key in ("branch", "default_branch"):
+            branch_raw = attrs.get(key)
+            if isinstance(branch_raw, str) and branch_raw.strip():
+                attrs["branches"] = [branch_raw.strip()]
+                return attrs
+
+        attrs["branches"] = ["main"]
+        return attrs
 
 
 class SprintCreateSerializer(serializers.Serializer):

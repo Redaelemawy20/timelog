@@ -1,6 +1,6 @@
 import { API_BASE } from "./client";
 import { apiFetch } from "./apiFetch";
-import type { GithubRepo, GithubTokenStatus } from "../types/github";
+import type { GithubBranch, GithubRepo, GithubTokenStatus } from "../types/github";
 
 export async function fetchGithubTokenStatus(): Promise<GithubTokenStatus> {
   const res = await apiFetch(`${API_BASE}/github/token-status/`);
@@ -22,4 +22,25 @@ export async function fetchGithubRepos(): Promise<GithubRepo[]> {
   }
   const data = (await res.json()) as { repos: GithubRepo[] };
   return data.repos;
+}
+
+export async function fetchGithubRepoBranches(
+  owner: string,
+  repo: string,
+): Promise<GithubBranch[]> {
+  const ownerEnc = encodeURIComponent(owner);
+  const repoEnc = encodeURIComponent(repo);
+  const res = await apiFetch(`${API_BASE}/github/repos/${ownerEnc}/${repoEnc}/branches/`);
+  if (!res.ok) {
+    let message = `Failed to fetch branches (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+  const data = (await res.json()) as { branches: GithubBranch[] };
+  return data.branches;
 }

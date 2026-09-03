@@ -33,6 +33,11 @@ urlpatterns = [
     ),
     path("github/token-status/", views.api_github_token_status, name="api_github_token_status"),
     path("github/repos/", views.api_github_repos, name="api_github_repos"),
+    path(
+        "github/repos/<str:owner>/<str:repo>/branches/",
+        views.api_github_repo_branches,
+        name="api_github_repo_branches",
+    ),
     # public (no auth)
     path("public/share/<str:token>/", views.api_public_sheet, name="api_public_sheet"),
     path("public/share/<str:token>/export/", views.api_public_sheet_export_excel, name="api_public_sheet_export_excel"),
