@@ -42,18 +42,21 @@ export default function Dashboard({ onAddClient, onAddSheet }: DashboardProps) {
           title="Clients"
           value={data?.client_count}
           loading={isPending}
+          to="/clients"
           icon={<Building2 className="size-4 text-muted-foreground" aria-hidden />}
         />
         <StatCard
           title="Sheets"
           value={data?.sheet_count}
           loading={isPending}
+          to="/sheets"
           icon={<FileSpreadsheet className="size-4 text-muted-foreground" aria-hidden />}
         />
         <StatCard
           title="Sprints"
           value={data?.sprint_count}
           loading={isPending}
+          to="/sheets"
           icon={<Layers className="size-4 text-muted-foreground" aria-hidden />}
         />
       </div>
@@ -95,28 +98,32 @@ function StatCard({
   title,
   value,
   loading,
+  to,
   icon,
 }: {
   title: string;
   value?: number;
   loading: boolean;
+  to: string;
   icon: React.ReactNode;
 }) {
   return (
-    <Card size="sm">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-8 w-16" />
-        ) : (
-          <p className="text-3xl font-semibold tracking-tight text-foreground">{value ?? 0}</p>
-        )}
-      </CardContent>
-    </Card>
+    <Link to={to} className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Card size="sm" className="h-full transition-colors hover:bg-accent/50">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+            {icon}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <Skeleton className="h-8 w-16" />
+          ) : (
+            <p className="text-3xl font-semibold tracking-tight text-foreground">{value ?? 0}</p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
