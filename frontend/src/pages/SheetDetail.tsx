@@ -93,11 +93,11 @@ export default function SheetDetail() {
   }, [addSprintOpen]);
 
   const handleExport = async () => {
-    if (!sheetId) return;
+    if (!sheetId || !sheet) return;
     setIsExporting(true);
     setExportError(null);
     try {
-      await exportSheetExcel(sheetId);
+      await exportSheetExcel(sheetId, sheet.name);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Export failed";
       setExportError(message);

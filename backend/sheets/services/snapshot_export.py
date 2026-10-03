@@ -1,8 +1,9 @@
-from datetime import datetime
 from io import BytesIO
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
+
+from .export_filename import sheet_export_filename
 
 
 def build_snapshot_export(
@@ -105,7 +106,4 @@ def build_snapshot_export(
     wb.save(buffer)
     buffer.seek(0)
 
-    sheet_name_safe = snapshot.get("sheet_name", "sheet").replace(" ", "_").replace("/", "_").replace("\\", "_")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{sheet_name_safe}_sprints_{timestamp}.xlsx"
-    return buffer, filename
+    return buffer, sheet_export_filename(snapshot.get("sheet_name", "sheet"))

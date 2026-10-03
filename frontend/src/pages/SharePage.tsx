@@ -66,10 +66,10 @@ export default function SharePage() {
   });
 
   const handleExportExcel = async () => {
-    if (!token) return;
+    if (!token || !data) return;
     setIsExporting(true);
     try {
-      await exportPublicSheetExcel(token);
+      await exportPublicSheetExcel(token, data.snapshot.sheet_name);
     } finally {
       setIsExporting(false);
     }

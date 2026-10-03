@@ -1,10 +1,10 @@
-from datetime import datetime
 from io import BytesIO
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from ..models import Sheet
+from .export_filename import sheet_export_filename
 
 
 def build_sheet_export(sheet: Sheet) -> tuple[BytesIO, str]:
@@ -110,7 +110,4 @@ def build_sheet_export(sheet: Sheet) -> tuple[BytesIO, str]:
     wb.save(buffer)
     buffer.seek(0)
 
-    sheet_name_safe = sheet.name.replace(" ", "_").replace("/", "_").replace("\\", "_")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{sheet_name_safe}_sprints_{timestamp}.xlsx"
-    return buffer, filename
+    return buffer, sheet_export_filename(sheet.name)

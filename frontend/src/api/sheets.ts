@@ -220,17 +220,16 @@ export async function fetchPublicSheet(token: string): Promise<PublicSheetRespon
   return res.json() as Promise<PublicSheetResponse>;
 }
 
-export async function exportPublicSheetExcel(token: string): Promise<void> {
+function sheetDownloadName(name: string): string {
+  return `${name.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").replace(/^[ .]+|[ .]+$/g, "") || "sheet"}.xlsx`;
+}
+
+export async function exportPublicSheetExcel(token: string, sheetName: string): Promise<void> {
   const res = await fetch(`${API_BASE}/public/share/${token}/export/`);
   if (!res.ok) throw new Error(`Failed to export (${res.status})`);
 
   const blob = await res.blob();
-  const contentDisposition = res.headers.get("Content-Disposition");
-  let filename = "sprints.xlsx";
-  if (contentDisposition) {
-    const match = /filename="?([^"]+)"?/.exec(contentDisposition);
-    if (match?.[1]) filename = match[1];
-  }
+  const filename = sheetDownloadName(sheetName);
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -242,7 +241,7 @@ export async function exportPublicSheetExcel(token: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export async function exportSheetExcel(sheetId: number): Promise<void> {
+export async function exportSheetExcel(sheetId: number, sheetName: string): Promise<void> {
   const res = await apiFetch(`${API_BASE}/sheets/${sheetId}/export/`);
   if (!res.ok) {
     throw new Error(`Failed to export sheet (${res.status})`);
@@ -250,14 +249,7 @@ export async function exportSheetExcel(sheetId: number): Promise<void> {
 
   const blob = await res.blob();
 
-  const contentDisposition = res.headers.get("Content-Disposition");
-  let filename = "sprints.xlsx";
-  if (contentDisposition) {
-    const match = /filename="?([^"]+)"?/.exec(contentDisposition);
-    if (match?.[1]) {
-      filename = match[1];
-    }
-  }
+  const filename = sheetDownloadName(sheetName);
 
   if (window.showSaveFilePicker) {
     try {
