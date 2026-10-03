@@ -1,79 +1,44 @@
 # Time Log
 
-Time Log is a lightweight app for organizing sheets and tracking work log entries by period, project, and repository.
+Time Log is a web app for tracking client work in sheets and dated sprints. It uses a React and Vite frontend, a Django REST API, and PostgreSQL (configured through `DATABASE_URL`).
 
-## Run
+## What it does
 
-Start the Django API, then the Vite app (`/api` is proxied to the backend).
+- Manage clients, their remaining hours, and sheets.
+- Give each client a sheet naming pattern: manual, previous month, or `client_name_month_day`. New sheet names are suggested in the form and can be edited. A month picker is also available.
+- Record sprints with date ranges, repositories, project notes, summaries, and hours. GitHub integration supplies repositories and branches; an OpenAI powered conversation can help draft sprint summaries.
+- Review dashboard totals, publish a read-only sheet snapshot with a share link, and download private or shared sheets as Excel files named after the sheet.
+- Sign in with a dashboard account. Shared sheet pages are public; other API endpoints require authentication.
 
-```bash
-cd backend && python manage.py runserver
-```
+## Run locally
 
-```bash
-cd frontend && pnpm dev
-```
+You need Python, a Node.js package manager, and a PostgreSQL connection string. The app expects a database URL even for local development.
 
-First time only: `pip install -r backend/requirements.txt` (prefer a venv), `pnpm install` in `frontend`.
+1. Create `backend/.env` using [`backend/env.example`](backend/env.example). Set `DATABASE_URL` and `SECRET_KEY`. Set `GITHUB_TOKEN` for repository features and `OPENAI_API_KEY` for summary chat.
+2. Install and start the API:
 
-## Supabase MCP (Cursor)
+   ```bash
+   python -m venv .venv
+   # Activate the virtual environment for your shell.
+   pip install -r backend/requirements.txt
+   cd backend
+   python manage.py migrate
+   python manage.py create_user YOUR_USERNAME YOUR_PASSWORD
+   python manage.py runserver
+   ```
 
-Copy `mcp.json.example` to `.cursor/mcp.json` (or merge into your existing file). The hosted server uses OAuth — no personal access token in the file.
+3. In another terminal, install and start the frontend:
 
-1. **Cursor Settings → Tools & MCP** — enable **supabase** and complete login when prompted.
-2. Do **not** add `project_ref` to the URL until a project exists; account tools (`create_project`, etc.) need the org-wide URL above.
-3. After the project exists, you can scope with `https://mcp.supabase.com/mcp?project_ref=YOUR_REF`.
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-PAT fallback (CI only): set `SUPABASE_ACCESS_TOKEN` and use `Authorization: Bearer ${env:SUPABASE_ACCESS_TOKEN}` in `headers`. Create tokens at https://supabase.com/dashboard/account/tokens
+Open `http://localhost:5173` and sign in with the user you created. Vite proxies `/api` to `http://127.0.0.1:8000`, so no frontend environment variable is needed locally. For another API host, set `VITE_API_BASE` to its URL ending in `/api`.
 
-## Database (Supabase)
+## Deploy
 
-Set `DATABASE_URL` in `backend/.env` to your Supabase PostgreSQL URI (see `backend/env.example`).
+The repository includes [`render.yaml`](render.yaml) for the Django API and [`frontend/vercel.json`](frontend/vercel.json) for the Vite app. Render installs backend dependencies and runs migrations during its build. Set `DATABASE_URL`, `SECRET_KEY`, `FRONTEND_URL`, and any GitHub or OpenAI keys the deployment needs. The API health endpoint is `/api/health/`.
 
-```bash
-cd backend
-python manage.py migrate
-python manage.py runserver
-```
-
-Optional backup/restore via JSON seed:
-
-```bash
-python manage.py export_seed    # writes fixtures/time_log_seed.json
-python manage.py seed --force   # reload seed into the database
-```
-
-## Deploy (Vercel + Render)
-
-**Backend (Render)** — set root directory to `backend`, or deploy from repo root with `render.yaml` (Blueprint).
-
-| Variable | Required |
-|----------|----------|
-| `DATABASE_URL` | Supabase URI (session pooler, port 5432) |
-| `SECRET_KEY` | Random string (Render can generate) |
-| `GITHUB_TOKEN` | GitHub PAT |
-| `OPENAI_API_KEY` | OpenAI key |
-| `FRONTEND_URL` | Vercel app URL, e.g. `https://your-app.vercel.app` |
-| `DEBUG` | `false` |
-
-Health check: `/api/health/`
-
-**Frontend (Vercel)** — set root directory to `frontend`.
-
-| Variable | Required |
-|----------|----------|
-| `VITE_API_BASE` | Render API base, e.g. `https://your-service.onrender.com/api` |
-
-Build command: `pnpm build` (install: `pnpm install`). No env var needed locally if you use the Vite `/api` proxy.
-
-## Purpose
-
-The project helps teams keep time and activity records in one place, with a React frontend and a Django REST backend.
-
-## Features
-
-- Manage sheets and view sheet details
-- Track repositories linked to each sheet
-- View log entry runs and their related entries
-- Expose REST endpoints for frontend data loading
-- Check GitHub token status through an API endpoint
+Deploy `frontend` on Vercel with `VITE_API_BASE` set to the Render URL ending in `/api`. Set `FRONTEND_URL` on Render to the Vercel origin so the frontend can call the API. Create a dashboard user with `python manage.py create_user YOUR_USERNAME YOUR_PASSWORD` in the backend environment.
