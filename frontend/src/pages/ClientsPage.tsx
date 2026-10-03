@@ -6,7 +6,7 @@ import { ClientNameDialog } from "../components/clients/ClientNameDialog";
 import { EmptyState, IconButton, PageHeader, TableShell } from "../components/layout/AppHeader";
 import { clientKeys } from "../lib/clientQueryKeys";
 import { dashboardKeys } from "../lib/dashboardQueryKeys";
-import type { Client } from "../types/sheet";
+import type { Client, SheetNamingPattern } from "../types/sheet";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -34,8 +34,8 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
   };
 
   const renameMutation = useMutation({
-    mutationFn: ({ id, name, remaining_hours }: { id: number; name: string; remaining_hours: number }) =>
-      updateClient(id, { name, remaining_hours }),
+    mutationFn: ({ id, name, remaining_hours, sheet_naming_pattern }: { id: number; name: string; remaining_hours: number; sheet_naming_pattern: SheetNamingPattern }) =>
+      updateClient(id, { name, remaining_hours, sheet_naming_pattern }),
     onSuccess: () => {
       invalidateAll();
       setRenameTarget(null);
@@ -53,14 +53,14 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
 
   const clients = clientsQuery.data ?? [];
 
-  const handleRenameSubmit = ({ name, remaining_hours }: { name: string; remaining_hours: number }) => {
+  const handleRenameSubmit = ({ name, remaining_hours, sheet_naming_pattern }: { name: string; remaining_hours: number; sheet_naming_pattern: SheetNamingPattern }) => {
     if (!renameTarget) return;
     if (!name) {
       setDialogError("Enter a client name.");
       return;
     }
     setDialogError(null);
-    renameMutation.mutate({ id: renameTarget.id, name, remaining_hours });
+    renameMutation.mutate({ id: renameTarget.id, name, remaining_hours, sheet_naming_pattern });
   };
 
   const handleDelete = (client: Client) => {
@@ -180,9 +180,10 @@ export default function ClientsPage({ onAddClient }: ClientsPageProps) {
       <ClientNameDialog
         open={renameTarget !== null}
         title="Edit client"
-        description="Update the client name and remaining hours."
+        description="Update the client name, remaining hours, and sheet naming."
         initialName={renameTarget?.name ?? ""}
         initialRemainingHours={parseFloat(renameTarget?.remaining_hours || "0")}
+        initialSheetNamingPattern={renameTarget?.sheet_naming_pattern}
         submitLabel="Save"
         submitting={renameMutation.isPending}
         error={dialogError}

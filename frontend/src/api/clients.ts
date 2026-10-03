@@ -1,6 +1,8 @@
 import { API_BASE } from "./client";
 import { apiFetch } from "./apiFetch";
-import type { Client } from "../types/sheet";
+import type { Client, SheetNamingPattern } from "../types/sheet";
+
+type ClientInput = { name?: string; remaining_hours?: number; sheet_naming_pattern?: SheetNamingPattern };
 
 export async function fetchClients(signal?: AbortSignal): Promise<Client[]> {
   const res = await apiFetch(`${API_BASE}/clients/`, { signal });
@@ -9,7 +11,7 @@ export async function fetchClients(signal?: AbortSignal): Promise<Client[]> {
   return res.json() as Promise<Client[]>;
 }
 
-export async function createClient(data: { name: string; remaining_hours?: number }): Promise<Client> {
+export async function createClient(data: ClientInput): Promise<Client> {
   const res = await apiFetch(`${API_BASE}/clients/`, {
     method: "POST",
     body: JSON.stringify(data),
@@ -33,7 +35,7 @@ export async function createClient(data: { name: string; remaining_hours?: numbe
   return res.json() as Promise<Client>;
 }
 
-export async function updateClient(id: number, data: { name?: string; remaining_hours?: number }): Promise<Client> {
+export async function updateClient(id: number, data: ClientInput): Promise<Client> {
   const res = await apiFetch(`${API_BASE}/clients/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(data),

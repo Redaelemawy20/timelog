@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { SheetNamingPattern } from "../../types/sheet";
 
 interface ClientNameDialogProps {
   open: boolean;
@@ -16,11 +17,12 @@ interface ClientNameDialogProps {
   description: string;
   initialName?: string;
   initialRemainingHours?: number;
+  initialSheetNamingPattern?: SheetNamingPattern;
   submitLabel: string;
   submitting?: boolean;
   error?: string | null;
   onClose: () => void;
-  onSubmit: (data: { name: string; remaining_hours: number }) => void;
+  onSubmit: (data: { name: string; remaining_hours: number; sheet_naming_pattern: SheetNamingPattern }) => void;
 }
 
 export function ClientNameDialog({
@@ -29,6 +31,7 @@ export function ClientNameDialog({
   description,
   initialName = "",
   initialRemainingHours = 0,
+  initialSheetNamingPattern = "manual",
   submitLabel,
   submitting = false,
   error = null,
@@ -38,17 +41,19 @@ export function ClientNameDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initialName);
   const [remainingHours, setRemainingHours] = useState(String(initialRemainingHours));
+  const [sheetNamingPattern, setSheetNamingPattern] = useState<SheetNamingPattern>(initialSheetNamingPattern);
 
   useEffect(() => {
     if (!open) return;
     setName(initialName);
     setRemainingHours(String(initialRemainingHours));
+    setSheetNamingPattern(initialSheetNamingPattern);
     queueMicrotask(() => inputRef.current?.focus());
-  }, [open, initialName, initialRemainingHours]);
+  }, [open, initialName, initialRemainingHours, initialSheetNamingPattern]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ name: name.trim(), remaining_hours: parseFloat(remainingHours) || 0 });
+    onSubmit({ name: name.trim(), remaining_hours: parseFloat(remainingHours) || 0, sheet_naming_pattern: sheetNamingPattern });
   };
 
   return (
@@ -89,6 +94,20 @@ export function ClientNameDialog({
               disabled={submitting}
               placeholder="0"
             />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="client-sheet-naming">New sheet names</Label>
+            <select
+              id="client-sheet-naming"
+              value={sheetNamingPattern}
+              onChange={(e) => setSheetNamingPattern(e.target.value as SheetNamingPattern)}
+              disabled={submitting}
+              className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+            >
+              <option value="manual">Enter manually</option>
+              <option value="month">Current month (May)</option>
+              <option value="client_date">Client name and date (it_planet_10_3)</option>
+            </select>
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <div className="flex justify-end gap-2">

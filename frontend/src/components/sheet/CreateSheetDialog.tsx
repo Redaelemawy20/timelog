@@ -5,6 +5,7 @@ import { createSheet } from "../../api/sheets";
 import { clientKeys } from "../../lib/clientQueryKeys";
 import { dashboardKeys } from "../../lib/dashboardQueryKeys";
 import { sheetKeys } from "../../lib/sheetQueryKeys";
+import { monthNames, suggestedSheetName } from "../../lib/sheetNaming";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface CreateSheetDialogProps {
@@ -33,7 +35,8 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const newClientInputRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState<string | null>(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [clientId, setClientId] = useState("");
   const [addClientOpen, setAddClientOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
@@ -48,6 +51,8 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
   });
 
   const clients = clientsQuery.isSuccess ? (clientsQuery.data ?? []) : [];
+  const selectedClient = clients.find((client) => String(client.id) === clientId);
+  const displayedName = name ?? (selectedClient ? suggestedSheetName(selectedClient) : "");
 
   const saveClientMutation = useMutation({
     mutationFn: (clientName: string) => createClient({ name: clientName }),
@@ -65,7 +70,7 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: { name: string; client_id: number }) => createSheet(payload),
+    mutationFn: createSheet,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: sheetKeys.all });
       void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
@@ -78,7 +83,8 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
 
   useEffect(() => {
     if (!open) return;
-    setName("");
+    setName(null);
+    setMonthPickerOpen(false);
     setClientId("");
     setAddClientOpen(false);
     setNewClientName("");
@@ -124,7 +130,7 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = name.trim();
+    const trimmed = displayedName.trim();
     if (!trimmed) {
       setError("Enter a sheet name.");
       return;
@@ -134,7 +140,7 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
       return;
     }
     setError(null);
-    createMutation.mutate({ name: trimmed, client_id: Number(clientId) });
+    createMutation.mutate({ name: name === null ? undefined : trimmed, client_id: Number(clientId) });
   };
 
   return (
@@ -201,7 +207,10 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
                 <select
                   id="create-sheet-client"
                   value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
+                  onChange={(e) => {
+                    setClientId(e.target.value);
+                    setName(null);
+                  }}
                   disabled={busy}
                   className={selectClassName}
                 >
@@ -245,18 +254,48 @@ export function CreateSheetDialog({ open, onClose }: CreateSheetDialogProps) {
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="create-sheet-name">Sheet name</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="create-sheet-name">Sheet name</Label>
+              <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
+                <PopoverTrigger
+                  type="button"
+                  disabled={busy}
+                  className="text-sm text-primary underline underline-offset-2 hover:text-primary/80 disabled:opacity-50"
+                >
+                  Fill month
+                </PopoverTrigger>
+                <PopoverContent align="end" className="grid w-64 grid-cols-3 gap-1" aria-label="Choose a month">
+                  {monthNames.map((month) => (
+                    <button
+                      key={month}
+                      type="button"
+                      className="rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                      onClick={() => {
+                        setName(month);
+                        setMonthPickerOpen(false);
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      {month}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
             <Input
               ref={inputRef}
               id="create-sheet-name"
               type="text"
-              value={name}
+              value={displayedName}
               onChange={(e) => setName(e.target.value)}
               maxLength={255}
               autoComplete="off"
               disabled={busy}
               placeholder="e.g. Q1 platform work"
             />
+            {selectedClient?.sheet_naming_pattern !== "manual" ? (
+              <p className="text-xs text-muted-foreground">Suggested from this client's naming pattern. You can edit it.</p>
+            ) : null}
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <div className="flex justify-end gap-2">

@@ -4,7 +4,13 @@ from django.db import models
 
 
 class Client(models.Model):
+    class SheetNamingPattern(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        MONTH = "month", "Current month"
+        CLIENT_DATE = "client_date", "Client name and date"
+
     name = models.CharField(max_length=255)
+    sheet_naming_pattern = models.CharField(max_length=16, choices=SheetNamingPattern.choices, default=SheetNamingPattern.MANUAL)
     remaining_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,12 +1,15 @@
 export interface Client {
   id: number;
   name: string;
+  sheet_naming_pattern: SheetNamingPattern;
   remaining_hours: string;
   total_worked_hours: number;
   sheet_count?: number;
   created_at: string;
   updated_at: string;
 }
+
+export type SheetNamingPattern = "manual" | "month" | "client_date";
 
 export interface DashboardStats {
   client_count: number;
@@ -59,7 +62,7 @@ export interface Sheet {
 }
 
 export interface CreateSheetPayload {
-  name: string;
+  name?: string;
   client_id: number;
 }
 

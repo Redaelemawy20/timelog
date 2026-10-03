@@ -15,6 +15,7 @@ import LoginPage from "./pages/LoginPage";
 import SharePage from "./pages/SharePage";
 import SheetDetail from "./pages/SheetDetail";
 import SheetsPage from "./pages/SheetsPage";
+import type { SheetNamingPattern } from "./types/sheet";
 
 function AppLayout() {
   const queryClient = useQueryClient();
@@ -36,13 +37,13 @@ function AppLayout() {
     },
   });
 
-  const handleAddClient = ({ name, remaining_hours }: { name: string; remaining_hours: number }) => {
+  const handleAddClient = ({ name, remaining_hours, sheet_naming_pattern }: { name: string; remaining_hours: number; sheet_naming_pattern: SheetNamingPattern }) => {
     if (!name) {
       setAddClientError("Enter a client name.");
       return;
     }
     setAddClientError(null);
-    addClientMutation.mutate({ name, remaining_hours });
+    addClientMutation.mutate({ name, remaining_hours, sheet_naming_pattern });
   };
 
   return (

@@ -1,4 +1,7 @@
 from django.db import models
+from datetime import timedelta
+from django.utils import timezone
+from django.utils.text import slugify
 from rest_framework import serializers
 
 from .models import Client, Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
@@ -12,7 +15,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ["id", "name", "remaining_hours", "total_worked_hours", "sheet_count", "created_at", "updated_at"]
+        fields = ["id", "name", "sheet_naming_pattern", "remaining_hours", "total_worked_hours", "sheet_count", "created_at", "updated_at"]
 
     def get_sheet_count(self, obj: Client) -> int:
         annotated = getattr(obj, "sheet_count", None)
@@ -33,7 +36,7 @@ class ClientSerializer(serializers.ModelSerializer):
 class ClientCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = ["name", "remaining_hours"]
+        fields = ["name", "remaining_hours", "sheet_naming_pattern"]
         extra_kwargs = {"remaining_hours": {"required": False}}
 
     def validate_name(self, value: str) -> str:
@@ -46,7 +49,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
 class ClientUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = ["name", "remaining_hours"]
+        fields = ["name", "remaining_hours", "sheet_naming_pattern"]
 
     def validate_name(self, value: str) -> str:
         cleaned = value.strip()
@@ -110,6 +113,7 @@ class SheetListSerializer(serializers.ModelSerializer):
 
 
 class SheetCreateSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     client_id = serializers.PrimaryKeyRelatedField(
         source="client",
         queryset=Client.objects.all(),
@@ -121,9 +125,20 @@ class SheetCreateSerializer(serializers.ModelSerializer):
 
     def validate_name(self, value: str) -> str:
         cleaned = value.strip()
-        if not cleaned:
-            raise serializers.ValidationError("Name is required.")
         return cleaned
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs.get("name"):
+            return attrs
+        client = attrs["client"]
+        today = timezone.localdate()
+        if client.sheet_naming_pattern == Client.SheetNamingPattern.MONTH:
+            attrs["name"] = (today.replace(day=1) - timedelta(days=1)).strftime("%B")
+        elif client.sheet_naming_pattern == Client.SheetNamingPattern.CLIENT_DATE:
+            attrs["name"] = f"{slugify(client.name).replace('-', '_')}_{today.month}_{today.day}"
+        if not attrs.get("name"):
+            raise serializers.ValidationError({"name": "Enter a sheet name."})
+        return attrs
 
 
 class SheetUpdateSerializer(serializers.ModelSerializer):
