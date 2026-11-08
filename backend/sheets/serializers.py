@@ -6,7 +6,8 @@ from rest_framework import serializers
 
 from .models import Client, Sheet, SheetRepo, Sprint, SprintConversationMessage, SprintRepo
 
-MAX_REPOS_PER_SPRINT = 3
+MAX_REPOS_PER_SPRINT = 5
+MAX_BRANCHES_PER_REPO = 5
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -229,6 +230,10 @@ class RepoRefSerializer(serializers.Serializer):
                 cleaned.append(name)
             if not cleaned:
                 raise serializers.ValidationError({"branches": "Select at least one branch."})
+            if len(cleaned) > MAX_BRANCHES_PER_REPO:
+                raise serializers.ValidationError(
+                    {"branches": f"You can select at most {MAX_BRANCHES_PER_REPO} branches per repository."}
+                )
             attrs["branches"] = cleaned
             return attrs
 

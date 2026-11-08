@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { MAX_BRANCHES_PER_REPO } from "../../lib/addSprintSchema";
 import { cn } from "@/lib/utils";
 
 interface RepoBranchPickerProps {
@@ -18,16 +19,18 @@ export function RepoBranchPicker({
   isError,
   onChange,
 }: RepoBranchPickerProps) {
+  const groupId = `sprint-repo-branches-${repoId}`;
+  const limitReached = selected.length >= MAX_BRANCHES_PER_REPO;
+
   const toggleBranch = (branch: string) => {
     if (selected.includes(branch)) {
       if (selected.length === 1) return;
       onChange(selected.filter((name) => name !== branch));
       return;
     }
+    if (limitReached) return;
     onChange([...selected, branch]);
   };
-
-  const groupId = `sprint-repo-branches-${repoId}`;
 
   return (
     <div
@@ -36,7 +39,7 @@ export function RepoBranchPicker({
       onKeyDown={(e) => e.stopPropagation()}
     >
       <p id={groupId} className="text-xs text-muted-foreground">
-        Branches
+        Branches ({selected.length} / {MAX_BRANCHES_PER_REPO})
       </p>
       {isPending ? (
         <p className="text-xs text-muted-foreground">Loading branches...</p>
@@ -55,9 +58,10 @@ export function RepoBranchPicker({
                 <button
                   type="button"
                   aria-pressed={isSelected}
+                  disabled={limitReached && !isSelected}
                   onClick={() => toggleBranch(branch)}
                   className={cn(
-                    "flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                    "flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
                     isSelected ? "bg-accent/70" : "hover:bg-muted/60",
                   )}
                 >

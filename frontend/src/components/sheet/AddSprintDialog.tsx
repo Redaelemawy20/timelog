@@ -2,7 +2,11 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { fetchGithubRepoBranches, fetchGithubRepos } from "../../api/github";
-import { addSprintDraftSchema, MAX_REPOS_PER_SPRINT } from "../../lib/addSprintSchema";
+import {
+  addSprintDraftSchema,
+  MAX_BRANCHES_PER_REPO,
+  MAX_REPOS_PER_SPRINT,
+} from "../../lib/addSprintSchema";
 import type { CreateSprintPayload } from "../../types/sheet";
 import { RepoBranchPicker } from "./RepoBranchPicker";
 import { Badge } from "@/components/ui/badge";
@@ -236,8 +240,8 @@ export function AddSprintDialog({
           <DialogHeader>
             <DialogTitle>Add sprint</DialogTitle>
             <DialogDescription>
-              Choose up to {MAX_REPOS_PER_SPRINT} repositories, select one or more branches per
-              repo, and set the time range for this sprint.
+              Choose up to {MAX_REPOS_PER_SPRINT} repositories, select up to{" "}
+              {MAX_BRANCHES_PER_REPO} branches per repo, and set the time range for this sprint.
             </DialogDescription>
           </DialogHeader>
         </div>

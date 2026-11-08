@@ -1,10 +1,12 @@
 import { z } from "zod";
 
-export const MAX_REPOS_PER_SPRINT = 3;
+export const MAX_REPOS_PER_SPRINT = 5;
+export const MAX_BRANCHES_PER_REPO = 5;
 
 const branchListSchema = z
   .array(z.string().trim().min(1))
-  .min(1, "Select at least one branch.");
+  .min(1, "Select at least one branch.")
+  .max(MAX_BRANCHES_PER_REPO, `You can select at most ${MAX_BRANCHES_PER_REPO} branches per repository.`);
 
 export const addSprintDraftSchema = z
   .object({
